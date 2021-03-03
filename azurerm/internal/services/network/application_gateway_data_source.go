@@ -64,9 +64,12 @@ func dataSourceApplicationGatewayRead(d *schema.ResourceData, meta interface{}) 
 	d.Set("location", location.NormalizeNilable(resp.Location))
 
 	identity := flattenApplicationGatewayDataSourceIdentity(resp.Identity)
-	flattenedIdentity := applicationGatewayDataSourceIdentity{}.Flatten(identity)
+	flattenedIdentity, err := applicationGatewayDataSourceIdentity{}.Flatten(identity)
+	if err != nil {
+		return fmt.Errorf("flattening `identity`: %+v", err)
+	}
 	if err = d.Set("identity", flattenedIdentity); err != nil {
-		return err
+		return fmt.Errorf("setting `identity`: %+v", err)
 	}
 
 	return tags.FlattenAndSet(d, resp.Tags)

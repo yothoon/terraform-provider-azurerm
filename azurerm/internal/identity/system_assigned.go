@@ -21,9 +21,9 @@ func (s SystemAssigned) Expand(input []interface{}) (*ExpandedConfig, error) {
 	}, nil
 }
 
-func (s SystemAssigned) Flatten(input *ExpandedConfig) []interface{} {
+func (s SystemAssigned) Flatten(input *ExpandedConfig) (*[]interface{}, error) {
 	if input == nil || input.Type == none {
-		return []interface{}{}
+		return &[]interface{}{}, nil
 	}
 
 	var coalesce = func(input *string) string {
@@ -34,13 +34,13 @@ func (s SystemAssigned) Flatten(input *ExpandedConfig) []interface{} {
 		return *input
 	}
 
-	return []interface{}{
+	return &[]interface{}{
 		map[string]interface{}{
 			"type":         input.Type,
 			"principal_id": coalesce(input.PrincipalId),
 			"tenant_id":    coalesce(input.TenantId),
 		},
-	}
+	}, nil
 }
 
 func (s SystemAssigned) Schema() *schema.Schema {

@@ -22,6 +22,6 @@ type ExpandedConfig struct {
 
 type Identity interface {
 	Expand(input []interface{}) (*ExpandedConfig, error)
-	Flatten(input *ExpandedConfig) []interface{}
+	Flatten(input *ExpandedConfig) (*[]interface{}, error)
 	Schema() *schema.Schema
 }

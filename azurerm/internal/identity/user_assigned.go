@@ -3,6 +3,7 @@ package identity
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	msiParse "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/msi/parse"
 )
 
 var _ Identity = UserAssigned{}
@@ -16,31 +17,41 @@ func (u UserAssigned) Expand(input []interface{}) (*ExpandedConfig, error) {
 		}, nil
 	}
 
+	item := input[0].(map[string]interface{})
+
+	identityIds := make([]string, 0)
+	for _, id := range item["identity_ids"].([]string) {
+		identityIds = append(identityIds, id)
+	}
+
 	return &ExpandedConfig{
-		Type: systemAssigned,
+		Type:                    userAssigned,
+		UserAssignedIdentityIds: &identityIds,
 	}, nil
 }
 
-func (u UserAssigned) Flatten(input *ExpandedConfig) []interface{} {
+func (u UserAssigned) Flatten(input *ExpandedConfig) (*[]interface{}, error) {
 	if input == nil || input.Type == none {
-		return []interface{}{}
+		return &[]interface{}{}, nil
 	}
 
-	var coalesce = func(input *string) string {
-		if input == nil {
-			return ""
+	identityIds := make([]string, 0)
+	if input.UserAssignedIdentityIds != nil {
+		for _, key := range *input.UserAssignedIdentityIds {
+			parsedId, err := msiParse.UserAssignedIdentityID(key)
+			if err != nil {
+				return nil, err
+			}
+			identityIds = append(identityIds, parsedId.ID())
 		}
-
-		return *input
 	}
 
-	return []interface{}{
+	return &[]interface{}{
 		map[string]interface{}{
 			"type":         input.Type,
-			"principal_id": coalesce(input.PrincipalId),
-			"tenant_id":    coalesce(input.TenantId),
+			"identity_ids": identityIds,
 		},
-	}
+	}, nil
 }
 
 func (u UserAssigned) Schema() *schema.Schema {

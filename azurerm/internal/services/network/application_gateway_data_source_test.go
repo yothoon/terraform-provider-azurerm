@@ -21,6 +21,7 @@ func TestAccDataSourceAppGateway_basic(t *testing.T) {
 			Config: r.basic(data),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).Key("location").Exists(),
+				check.That(data.ResourceName).Key("identity.0.identity_ids.%").Exists(),
 			),
 		},
 	})

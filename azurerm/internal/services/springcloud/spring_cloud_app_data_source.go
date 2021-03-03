@@ -121,7 +121,11 @@ func dataSourceSpringCloudAppRead(d *schema.ResourceData, meta interface{}) erro
 	d.Set("name", id.AppName)
 	d.Set("service_name", id.SpringName)
 	d.Set("resource_group_name", id.ResourceGroup)
-	if err := d.Set("identity", flattenSpringCloudAppIdentity(resp.Identity)); err != nil {
+	flattenedIdentity, err := flattenSpringCloudAppIdentity(resp.Identity)
+	if err != nil {
+		return fmt.Errorf("flattening `identity`: %+v", err)
+	}
+	if err := d.Set("identity", flattenedIdentity); err != nil {
 		return fmt.Errorf("setting `identity`: %s", err)
 	}
 
