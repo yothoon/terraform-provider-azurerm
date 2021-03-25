@@ -217,6 +217,7 @@ func resourceCosmosDbAccount() *schema.Resource {
 			"capabilities": {
 				Type:     schema.TypeSet,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
