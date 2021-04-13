@@ -1329,7 +1329,7 @@ resource "azuread_application" "cluster_explorer" {
   oauth2_allow_implicit_flow = true
 
   # https://blogs.msdn.microsoft.com/aaddevsup/2018/06/06/guid-table-for-windows-azure-active-directory-permissions/
-  # https://shawntabrizi.com/aad/common-microsoft-resources-azure-active-directory/
+  # https://shawntabrizi.com/aad/helpers-microsoft-resources-azure-active-directory/
   required_resource_access {
     resource_app_id = "00000002-0000-0000-c000-000000000000"
 
@@ -1352,7 +1352,7 @@ resource "azuread_application" "cluster_console" {
   oauth2_allow_implicit_flow = true
 
   # https://blogs.msdn.microsoft.com/aaddevsup/2018/06/06/guid-table-for-windows-azure-active-directory-permissions/
-  # https://shawntabrizi.com/aad/common-microsoft-resources-azure-active-directory/
+  # https://shawntabrizi.com/aad/helpers-microsoft-resources-azure-active-directory/
   required_resource_access {
     resource_app_id = "00000002-0000-0000-c000-000000000000"
 
