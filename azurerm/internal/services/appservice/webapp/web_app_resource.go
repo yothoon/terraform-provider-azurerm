@@ -3,51 +3,52 @@ package webapp
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
-
-	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/appservice"
-
-	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/tags"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/location"
 
 	"github.com/Azure/azure-sdk-for-go/services/web/mgmt/2020-06-01/web"
-
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/azure"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/sdk"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/appservice/helpers"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/appservice/parse"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/appservice/validate"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/tags"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/utils"
 )
 
 type AppResource struct{}
 
 type AppModel struct {
-	Name                          string                      `tfschema:"name"`
-	ResourceGroup                 string                      `tfschema:"resource_group_name"`
-	Location                      string                      `tfschema:"location"`
-	ServicePlanId                 string                      `tfschema:"service_plan_id"`
-	AppSettings                   map[string]string           `tfschema:"app_settings"`
-	AuthSettings                  []appservice.AuthSettings   `tfschema:"auth_settings"`
-	Backup                        []Backup                    `tfschema:"backup"`
-	ClientAffinityEnabled         bool                        `tfschema:"client_affinity_enabled"`
-	ClientCertEnabled             bool                        `tfschema:"client_cert_enabled"`
-	ClientCertMode                string                      `tfschema:"client_cert_mode"`
-	Enabled                       bool                        `tfschema:"enabled"`
-	HttpsOnly                     bool                        `tfschema:"https_only"`
-	Identity                      []appservice.Identity       `tfschema:"identity"`
-	SiteConfig                    []SiteConfig                `tfschema:"site_config"`
-	StorageAccounts               []StorageAccount            `tfschema:"storage_account"`
-	Tags                          map[string]interface{}      `tfschema:"tags"`
-	CustomDomainVerificationId    string                      `tfschema:"custom_domain_verification_id"`
-	DefaultHostname               string                      `tfschema:"default_hostname"`
-	Kind                          string                      `tfschema:"kind"`
-	OutboundIPAddresses           string                      `tfschema:"outbound_ip_addresses"`
-	OutboundIPAddressList         []string                    `tfschema:"outbound_ip_address_list"`
-	PossibleOutboundIPAddresses   string                      `tfschema:"possible_outbound_ip_addresses"`
-	PossibleOutboundIPAddressList []string                    `tfschema:"possible_outbound_ip_address_list"`
-	SiteCredentials               []appservice.SiteCredential `tfschema:"site_credential"`
+	Name                          string                   `tfschema:"name"`
+	ResourceGroup                 string                   `tfschema:"resource_group_name"`
+	Location                      string                   `tfschema:"location"`
+	ServicePlanId                 string                   `tfschema:"service_plan_id"`
+	AppSettings                   map[string]string        `tfschema:"app_settings"`
+	AuthSettings                  []helpers.AuthSettings   `tfschema:"auth_settings"`
+	Backup                        []Backup                 `tfschema:"backup"`
+	ClientAffinityEnabled         bool                     `tfschema:"client_affinity_enabled"`
+	ClientCertEnabled             bool                     `tfschema:"client_cert_enabled"`
+	ClientCertMode                string                   `tfschema:"client_cert_mode"`
+	Enabled                       bool                     `tfschema:"enabled"`
+	HttpsOnly                     bool                     `tfschema:"https_only"`
+	Identity                      []helpers.Identity       `tfschema:"identity"`
+	LogsConfig                    []LogsConfig             `tfschema:"logs"`
+	SiteConfig                    []SiteConfig             `tfschema:"site_config"`
+	StorageAccounts               []StorageAccount         `tfschema:"storage_account"`
+	ConnectionStrings             []ConnectionString       `tfschema:"connection_string"`
+	Tags                          map[string]interface{}   `tfschema:"tags"`
+	CustomDomainVerificationId    string                   `tfschema:"custom_domain_verification_id"`
+	DefaultHostname               string                   `tfschema:"default_hostname"`
+	Kind                          string                   `tfschema:"kind"`
+	OutboundIPAddresses           string                   `tfschema:"outbound_ip_addresses"`
+	OutboundIPAddressList         []string                 `tfschema:"outbound_ip_address_list"`
+	PossibleOutboundIPAddresses   string                   `tfschema:"possible_outbound_ip_addresses"`
+	PossibleOutboundIPAddressList []string                 `tfschema:"possible_outbound_ip_address_list"`
+	SiteCredentials               []helpers.SiteCredential `tfschema:"site_credential"`
 }
 
 var _ sdk.Resource = AppResource{}
@@ -74,7 +75,7 @@ func (r AppResource) Arguments() map[string]*schema.Schema {
 
 		// Optional
 
-		"app_setting": {
+		"app_settings": {
 			Type:     schema.TypeMap,
 			Optional: true,
 			Computed: true,
@@ -83,7 +84,7 @@ func (r AppResource) Arguments() map[string]*schema.Schema {
 			},
 		},
 
-		"auth_settings": appservice.AuthSettingsSchema(),
+		"auth_settings": helpers.AuthSettingsSchema(),
 
 		"backup": backupSchema(),
 
@@ -102,6 +103,7 @@ func (r AppResource) Arguments() map[string]*schema.Schema {
 		"client_cert_mode": {
 			Type:     schema.TypeString,
 			Optional: true,
+			Default:  "Required",
 			ValidateFunc: validation.StringInSlice([]string{
 				string(web.Optional),
 				string(web.Required),
@@ -122,7 +124,9 @@ func (r AppResource) Arguments() map[string]*schema.Schema {
 			Default:  false,
 		},
 
-		"identity": appservice.IdentitySchema(),
+		"identity": helpers.IdentitySchema(),
+
+		"logs": logsConfigSchema(),
 
 		"site_config": siteConfigSchema(),
 
@@ -176,7 +180,7 @@ func (r AppResource) Attributes() map[string]*schema.Schema {
 			},
 		},
 
-		"site_credential": appservice.SiteCredentialSchema(),
+		"site_credential": helpers.SiteCredentialSchema(),
 	}
 }
 
@@ -223,7 +227,7 @@ func (r AppResource) Create() sdk.ResourceFunc {
 
 			servicePlan, err := servicePlanClient.Get(ctx, servicePlanId.ResourceGroup, servicePlanId.ServerfarmName)
 			if err != nil {
-				return fmt.Errorf("reading App %s: %+v", servicePlanId)
+				return fmt.Errorf("reading App %s: %+v", servicePlanId, err)
 			}
 			// TODO - Does this change for Private Link?
 			if servicePlan.HostingEnvironmentProfile != nil {
@@ -240,7 +244,7 @@ func (r AppResource) Create() sdk.ResourceFunc {
 				return fmt.Errorf("the Site Name %q failed the availabilty check: %+v", id.SiteName, *checkName.Message)
 			}
 
-			siteConfig, err := expandSiteConfig(&webApp.SiteConfig)
+			siteConfig, err := expandSiteConfig(webApp.SiteConfig)
 			if err != nil {
 				return err
 			}
@@ -259,30 +263,66 @@ func (r AppResource) Create() sdk.ResourceFunc {
 				},
 			}
 
-			if len(webApp.Identity) > 0 {
-				identity, err := appservice.ExpandIdentity(webApp.Identity)
-				if err != nil {
-					return err
-				}
+			identity := helpers.ExpandIdentity(webApp.Identity)
+			if identity != nil {
 				siteEnvelope.Identity = identity
 			}
 
-			if _, err := client.CreateOrUpdate(ctx, id.ResourceGroup, id.SiteName, siteEnvelope); err != nil {
+			future, err := client.CreateOrUpdate(ctx, id.ResourceGroup, id.SiteName, siteEnvelope)
+			if err != nil {
 				return fmt.Errorf("creating Web App %s: %+v", id, err)
+			}
+
+			if err := future.WaitForCompletionRef(ctx, client.Client); err != nil {
+				return fmt.Errorf("waiting for creation of Web App %s: %+v", id, err)
 			}
 
 			metadata.SetID(id)
 
-			auth, err := appservice.ExpandAuthSettings(webApp.AuthSettings)
-			if err != nil {
-				return err
+			appSettings := expandAppSettings(webApp.AppSettings)
+			if appSettings != nil {
+				if _, err := client.UpdateApplicationSettings(ctx, id.ResourceGroup, id.SiteName, *appSettings); err != nil {
+					return fmt.Errorf("setting App Settings for Web App %s: %+v", id, err)
+				}
 			}
 
-			if _, err := client.UpdateAuthSettings(ctx, id.ResourceGroup, id.SiteName, *auth); err != nil {
-				return fmt.Errorf("setting Authorisation settings for %s: %+v", id, err)
+			auth := helpers.ExpandAuthSettings(webApp.AuthSettings)
+			if auth != nil {
+				if _, err := client.UpdateAuthSettings(ctx, id.ResourceGroup, id.SiteName, *auth); err != nil {
+					return fmt.Errorf("setting Authorisation Settings for %s: %+v", id, err)
+				}
 			}
 
-			// logSettings := expandLogsSettings(webApp.Logs)
+			logsConfig := expandLogsConfig(webApp.LogsConfig)
+			if logsConfig != nil {
+				if _, err := client.UpdateDiagnosticLogsConfig(ctx, id.ResourceGroup, id.SiteName, *logsConfig); err != nil {
+					return fmt.Errorf("setting Diagnostic Logs Configuration for Web App %s: %+v", id, err)
+				}
+			}
+
+			backupConfig := expandBackupConfig(webApp.Backup)
+			if backupConfig != nil {
+				if _, err := client.UpdateBackupConfiguration(ctx, id.ResourceGroup, id.SiteName, *backupConfig); err != nil {
+					return fmt.Errorf("adding Backup Settings for Web App %s: %+v", id, err)
+				}
+			}
+
+			storageConfig := expandStorageConfig(webApp.StorageAccounts)
+			if storageConfig != nil {
+				if _, err := client.UpdateAzureStorageAccounts(ctx, id.ResourceGroup, id.SiteName, *storageConfig); err != nil {
+					if err != nil {
+						return fmt.Errorf("setting Storage Accounts for Web App %s: %+v", id, err)
+					}
+				}
+			}
+
+			connectionStrings := expandConnectionStrings(webApp.ConnectionStrings)
+			if connectionStrings != nil {
+				if _, err := client.UpdateConnectionStrings(ctx, id.ResourceGroup, id.SiteName, *connectionStrings); err != nil {
+					return fmt.Errorf("setting Connection Strings for Web App %s: %+v", id, err)
+				}
+			}
+
 			return nil
 		},
 
@@ -291,17 +331,208 @@ func (r AppResource) Create() sdk.ResourceFunc {
 }
 
 func (r AppResource) Read() sdk.ResourceFunc {
-	panic("implement me")
+	return sdk.ResourceFunc{
+		Timeout: 5 * time.Minute,
+		Func: func(ctx context.Context, metadata sdk.ResourceMetaData) error {
+			client := metadata.Client.AppService.WebAppsClient
+			id, err := parse.WebAppID(metadata.ResourceData.Id())
+			if err != nil {
+				return err
+			}
+			webApp, err := client.Get(ctx, id.ResourceGroup, id.SiteName)
+			if err != nil {
+				if utils.ResponseWasNotFound(webApp.Response) {
+					return metadata.MarkAsGone(id)
+				}
+				return fmt.Errorf("reading Web App %s: %+v", id, err)
+			}
+
+			if webApp.SiteProperties == nil {
+				return fmt.Errorf("reading properties of Web App %s", id)
+			}
+
+			// Despite being part of the defined `Get` response model, site_config is always nil so we get it explicitly
+			webAppSiteConfig, err := client.GetConfiguration(ctx, id.ResourceGroup, id.SiteName)
+			if err != nil {
+				return fmt.Errorf("reading Site Config for Web App %s: %+v", id, err)
+			}
+
+			auth, err := client.GetAuthSettings(ctx, id.ResourceGroup, id.SiteName)
+			if err != nil {
+				return fmt.Errorf("reading Auth Settings for Web App %s: %+v", id, err)
+			}
+
+			backup, err := client.GetBackupConfiguration(ctx, id.ResourceGroup, id.SiteName)
+			if err != nil {
+				if !utils.ResponseWasNotFound(backup.Response) {
+					return fmt.Errorf("reading Backup Settings for Web App %s: %+v", id, err)
+				}
+			}
+
+			logsConfig, err := client.GetDiagnosticLogsConfiguration(ctx, id.ResourceGroup, id.SiteName)
+			if err != nil {
+				return fmt.Errorf("reading Diagnostic Logs information for Web App %s: %+v", id, err)
+			}
+
+			appSettings, err := client.ListApplicationSettings(ctx, id.ResourceGroup, id.SiteName)
+			if err != nil {
+				return fmt.Errorf("reading App Settings for Web App %s: %+v", id, err)
+			}
+
+			storageAccounts, err := client.ListAzureStorageAccounts(ctx, id.ResourceGroup, id.SiteName)
+			if err != nil {
+				return fmt.Errorf("reading Storage Account information for Web App %s: %+v", id, err)
+			}
+
+			connectionStrings, err := client.ListConnectionStrings(ctx, id.ResourceGroup, id.SiteName)
+			if err != nil {
+				return fmt.Errorf("reading Connection String information for Web App %s: %+v", id, err)
+			}
+
+			siteCredentialsFuture, err := client.ListPublishingCredentials(ctx, id.ResourceGroup, id.SiteName)
+			if err != nil {
+				return fmt.Errorf("listing Site Publishing Credential information for Web App %s: %+v", id, err)
+			}
+
+			if err := siteCredentialsFuture.WaitForCompletionRef(ctx, client.Client); err != nil {
+				return fmt.Errorf("waiting for Site Publishing Credential information for Web App %s: %+v", id, err)
+			}
+			siteCredentials, err := siteCredentialsFuture.Result(*client)
+			if err != nil {
+				return fmt.Errorf("reading Site Publishing Credential information for Web App %s: %+v", id, err)
+			}
+
+			state := AppModel{
+				Name:          id.SiteName,
+				ResourceGroup: id.ResourceGroup,
+				Location:      location.NormalizeNilable(webApp.Location),
+				AppSettings:   flattenAppSettings(appSettings),
+				Tags:          tags.Flatten(webApp.Tags),
+			}
+
+			webAppProps := webApp.SiteProperties
+			if webAppProps.ServerFarmID != nil {
+				state.ServicePlanId = *webAppProps.ServerFarmID
+			}
+
+			if webAppProps.ClientAffinityEnabled != nil {
+				state.ClientAffinityEnabled = *webAppProps.ClientAffinityEnabled
+			}
+
+			if webAppProps.ClientCertEnabled != nil {
+				state.ClientCertEnabled = *webAppProps.ClientCertEnabled
+			}
+
+			if webAppProps.ClientCertMode != "" {
+				state.ClientCertMode = string(webAppProps.ClientCertMode)
+			}
+
+			if webAppProps.Enabled != nil {
+				state.Enabled = *webAppProps.Enabled
+			}
+
+			if webAppProps.HTTPSOnly != nil {
+				state.HttpsOnly = *webAppProps.HTTPSOnly
+			}
+
+			if webAppProps.CustomDomainVerificationID != nil {
+				state.CustomDomainVerificationId = *webAppProps.CustomDomainVerificationID
+			}
+
+			if webAppProps.DefaultHostName != nil {
+				state.DefaultHostname = *webAppProps.DefaultHostName
+			}
+
+			if webApp.Kind != nil {
+				state.Kind = *webApp.Kind
+			}
+
+			if webAppProps.OutboundIPAddresses != nil {
+				state.OutboundIPAddresses = *webAppProps.OutboundIPAddresses
+				state.OutboundIPAddressList = strings.Split(*webAppProps.OutboundIPAddresses, ",")
+			}
+
+			if webAppProps.PossibleOutboundIPAddresses != nil {
+				state.PossibleOutboundIPAddresses = *webAppProps.PossibleOutboundIPAddresses
+				state.PossibleOutboundIPAddressList = strings.Split(*webAppProps.PossibleOutboundIPAddresses, ",")
+			}
+
+			if appAuthSettings := helpers.FlattenAuthSettings(auth); appAuthSettings != nil {
+				state.AuthSettings = appAuthSettings
+			}
+
+			if appBackupSettings := flattenBackupConfig(backup); appBackupSettings != nil {
+				state.Backup = appBackupSettings
+			}
+
+			if identity := helpers.FlattenIdentity(webApp.Identity); identity != nil {
+				state.Identity = identity
+			}
+
+			if logs := flattenLogsConfig(logsConfig); logs != nil {
+				state.LogsConfig = logs
+			}
+
+			if siteConfig := flattenSiteConfig(webAppSiteConfig.SiteConfig); siteConfig != nil {
+				state.SiteConfig = siteConfig
+			}
+
+			if appStorageAccounts := flattenStorageAccounts(storageAccounts); appStorageAccounts != nil {
+				state.StorageAccounts = appStorageAccounts
+			}
+
+			if appConnectionStrings := flattenConnectionStrings(connectionStrings); appConnectionStrings != nil {
+				state.ConnectionStrings = appConnectionStrings
+			}
+
+			if userProps := siteCredentials.UserProperties; userProps != nil {
+				siteCredential := helpers.SiteCredential{}
+				if userProps.PublishingUserName != nil {
+					siteCredential.Username = *userProps.PublishingUserName
+				}
+				if userProps.PublishingPassword != nil {
+					siteCredential.Password = *userProps.PublishingPassword
+				}
+				state.SiteCredentials = []helpers.SiteCredential{siteCredential}
+			}
+			return metadata.Encode(&state)
+		},
+	}
 }
 
 func (r AppResource) Delete() sdk.ResourceFunc {
-	panic("implement me")
+	return sdk.ResourceFunc{
+		Timeout: 30 * time.Minute,
+		Func: func(ctx context.Context, metadata sdk.ResourceMetaData) error {
+			client := metadata.Client.AppService.WebAppsClient
+			id, err := parse.WebAppID(metadata.ResourceData.Id())
+			if err != nil {
+				return err
+			}
+
+			metadata.Logger.Infof("deleting %s", id)
+
+			deleteMetrics := true
+			deleteEmptyServerFarm := false
+			if resp, err := client.Delete(ctx, id.ResourceGroup, id.SiteName, &deleteMetrics, &deleteEmptyServerFarm); err != nil {
+				if !utils.ResponseWasNotFound(resp) {
+					return fmt.Errorf("deleting Web App %s: %+v", id, err)
+				}
+			}
+			return nil
+		},
+	}
 }
 
 func (r AppResource) IDValidationFunc() schema.SchemaValidateFunc {
-	panic("implement me")
+	return validate.WebAppID
 }
 
 func (r AppResource) Update() sdk.ResourceFunc {
-	panic("implement me")
+	return sdk.ResourceFunc{
+		Timeout: 30 * time.Minute,
+		Func: func(ctx context.Context, metadata sdk.ResourceMetaData) error {
+			return nil
+		},
+	}
 }
