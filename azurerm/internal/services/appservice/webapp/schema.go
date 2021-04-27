@@ -137,12 +137,13 @@ func siteConfigSchema() *schema.Schema {
 				"use_32_bit_worker": {
 					Type:     schema.TypeBool,
 					Optional: true,
+					Default:  false,
 				},
 
 				"websockets": {
 					Type:     schema.TypeBool,
 					Optional: true,
-					Computed: true,
+					Default:  false,
 				},
 
 				"ftps_state": {
@@ -530,6 +531,7 @@ func appLogBlobStorageSchema() *schema.Schema {
 				"retention_in_days": {
 					Type:     schema.TypeInt,
 					Required: true,
+					// TODO: Validation here?
 				},
 			},
 		},
@@ -597,6 +599,9 @@ func httpLogBlobStorageSchema() *schema.Schema {
 }
 
 func expandSiteConfig(siteConfig []SiteConfig) (*web.SiteConfig, error) {
+	if len(siteConfig) == 0 {
+		return nil, nil
+	}
 	expanded := &web.SiteConfig{}
 
 	for _, v := range siteConfig {
@@ -654,13 +659,9 @@ func expandSiteConfig(siteConfig []SiteConfig) (*web.SiteConfig, error) {
 			expanded.ScmType = web.ScmType(v.ScmType)
 		}
 
-		if v.Use32BitWorker {
-			expanded.Use32BitWorkerProcess = utils.Bool(v.Use32BitWorker)
-		}
+		expanded.Use32BitWorkerProcess = utils.Bool(v.Use32BitWorker)
 
-		if v.WebSockets {
-			expanded.WebSocketsEnabled = utils.Bool(v.WebSockets)
-		}
+		expanded.WebSocketsEnabled = utils.Bool(v.WebSockets)
 
 		if v.FtpsState != "" {
 			expanded.FtpsState = web.FtpsState(v.FtpsState)
@@ -695,11 +696,7 @@ func expandSiteConfig(siteConfig []SiteConfig) (*web.SiteConfig, error) {
 		}
 
 		if len(v.Cors) != 0 {
-			corsSettings, err := helpers.ExpandCorsSettings(v.Cors)
-			if err != nil {
-				return nil, err
-			}
-			expanded.Cors = corsSettings
+			expanded.Cors = helpers.ExpandCorsSettings(v.Cors)
 		}
 	}
 

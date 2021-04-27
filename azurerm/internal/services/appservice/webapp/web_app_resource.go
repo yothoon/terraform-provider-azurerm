@@ -65,7 +65,7 @@ func (r AppResource) Arguments() map[string]*schema.Schema {
 
 		"resource_group_name": azure.SchemaResourceGroupName(),
 
-		"location": azure.SchemaLocation(),
+		"location": location.Schema(),
 
 		"service_plan_id": {
 			Type:         schema.TypeString,
@@ -532,6 +532,71 @@ func (r AppResource) Update() sdk.ResourceFunc {
 	return sdk.ResourceFunc{
 		Timeout: 30 * time.Minute,
 		Func: func(ctx context.Context, metadata sdk.ResourceMetaData) error {
+			client := metadata.Client.AppService.WebAppsClient
+			id, err := parse.WebAppID(metadata.ResourceData.Id())
+			if err != nil {
+				return err
+			}
+
+			// TODO - Need locking here when the source control meta resource is added
+
+			var state AppModel
+			if err := metadata.Decode(&state); err != nil {
+				return fmt.Errorf("decoding: %+v", err)
+			}
+
+			sitePatch := web.SitePatchResource{
+				SitePatchResourceProperties: &web.SitePatchResourceProperties{
+					ServerFarmID:          utils.String(state.ServicePlanId),
+					Enabled:               utils.Bool(state.Enabled),
+					HTTPSOnly:             utils.Bool(state.HttpsOnly),
+					ClientAffinityEnabled: utils.Bool(state.ClientAffinityEnabled),
+					ClientCertEnabled:     utils.Bool(state.ClientCertEnabled),
+					ClientCertMode:        web.ClientCertMode(state.ClientCertMode),
+				},
+				Identity: helpers.ExpandIdentity(state.Identity),
+			}
+
+			siteConfig, err := expandSiteConfig(state.SiteConfig)
+			if err != nil {
+				return fmt.Errorf("expanding Site Config for Web App %s: %+v", id, err)
+			}
+
+			sitePatch.SiteConfig = siteConfig
+			if _, err = client.Update(ctx, id.ResourceGroup, id.SiteName, sitePatch); err != nil {
+				return fmt.Errorf("updating Web App %s: %+v", id, err)
+			}
+
+			if connectionStringUpdate := expandConnectionStrings(state.ConnectionStrings); connectionStringUpdate != nil {
+				if _, err := client.UpdateConnectionStrings(ctx, id.ResourceGroup, id.SiteName, *connectionStringUpdate); err != nil {
+					return fmt.Errorf("updating Connection Strings for Web App %s: %+v", id, err)
+				}
+			}
+
+			if authUpdate := helpers.ExpandAuthSettings(state.AuthSettings); authUpdate != nil {
+				if _, err := client.UpdateAuthSettings(ctx, id.ResourceGroup, id.SiteName, *authUpdate); err != nil {
+					return fmt.Errorf("updating Auth Settings for Web App %s: %+v", id, err)
+				}
+			}
+
+			if backupUpdate := expandBackupConfig(state.Backup); backupUpdate != nil {
+				if _, err := client.UpdateBackupConfiguration(ctx, id.ResourceGroup, id.SiteName, *backupUpdate); err != nil {
+					return fmt.Errorf("updating Backup Settings for Web App %s: %+v", id, err)
+				}
+			}
+
+			if logsUpdate := expandLogsConfig(state.LogsConfig); logsUpdate != nil {
+				if _, err := client.UpdateDiagnosticLogsConfig(ctx, id.ResourceGroup, id.SiteName, *logsUpdate); err != nil {
+					return fmt.Errorf("updating Logs Config for Web App %s: %+v", id, err)
+				}
+			}
+
+			if storageAccountUpdate := expandStorageConfig(state.StorageAccounts); storageAccountUpdate != nil {
+				if _, err := client.UpdateAzureStorageAccounts(ctx, id.ResourceGroup, id.SiteName, *storageAccountUpdate); err != nil {
+					return fmt.Errorf("updating Storage Accounts for Web App %s: %+v", id, err)
+				}
+			}
+
 			return nil
 		},
 	}
