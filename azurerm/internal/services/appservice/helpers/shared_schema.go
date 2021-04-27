@@ -741,11 +741,7 @@ func ExpandIpRestrictions(restrictions []IpRestriction) (*[]web.IPSecurityRestri
 
 		restriction.Action = utils.String(v.Action)
 
-		headers, err := expandIpRestrictionHeaders(v.Headers)
-		if err != nil {
-			return nil, err
-		}
-		restriction.Headers = headers
+		restriction.Headers = expandIpRestrictionHeaders(v.Headers)
 
 		expanded = append(expanded, restriction)
 	}
@@ -753,10 +749,10 @@ func ExpandIpRestrictions(restrictions []IpRestriction) (*[]web.IPSecurityRestri
 	return &expanded, nil
 }
 
-func expandIpRestrictionHeaders(headers []IpRestrictionHeaders) (map[string][]string, error) {
+func expandIpRestrictionHeaders(headers []IpRestrictionHeaders) map[string][]string {
 	result := make(map[string][]string)
 	if len(headers) == 0 {
-		return result, nil
+		return result
 	}
 
 	for _, v := range headers {
@@ -773,7 +769,7 @@ func expandIpRestrictionHeaders(headers []IpRestrictionHeaders) (map[string][]st
 			result["x-fd-healthprobe"] = v.XFDHealthProbe
 		}
 	}
-	return result, nil
+	return result
 }
 
 func ExpandCorsSettings(input []CorsSetting) *web.CorsSettings {
@@ -962,7 +958,7 @@ func FlattenAuthSettings(auth web.SiteAuthSettings) []AuthSettings {
 	}
 
 	if props.AdditionalLoginParams != nil {
-		params := make(map[string]string, 0)
+		params := make(map[string]string)
 		for _, v := range *props.AdditionalLoginParams {
 			parts := strings.Split(v, "=")
 			if len(parts) != 2 {
@@ -1183,9 +1179,9 @@ func FlattenIpRestrictions(ipRestrictionsList *[]web.IPSecurityRestriction) []Ip
 	return ipRestrictions
 }
 
-func flattenIpRestrictionHeaders(headers map[string][]string) (ipRestrictionHeaders []IpRestrictionHeaders) {
+func flattenIpRestrictionHeaders(headers map[string][]string) []IpRestrictionHeaders {
 	if len(headers) == 0 {
-		return
+		return nil
 	}
 	ipRestrictionHeader := IpRestrictionHeaders{}
 	if xForwardFor, ok := headers["x-forwarded-for"]; ok {
@@ -1204,11 +1200,11 @@ func flattenIpRestrictionHeaders(headers map[string][]string) (ipRestrictionHead
 		ipRestrictionHeader.XFDHealthProbe = xFDHealthProbe
 	}
 
-	return
+	return []IpRestrictionHeaders{ipRestrictionHeader}
 }
 
 func FlattenWebStringDictionary(input web.StringDictionary) map[string]string {
-	result := make(map[string]string, 0)
+	result := make(map[string]string)
 	for k, v := range input.Properties {
 		result[k] = utils.NormalizeNilableString(v)
 	}

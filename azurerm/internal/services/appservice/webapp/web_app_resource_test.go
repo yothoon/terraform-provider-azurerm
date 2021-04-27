@@ -44,7 +44,6 @@ func TestAccWebApp_requiresImport(t *testing.T) {
 		},
 		data.RequiresImportErrorStep(r.requiresImport),
 	})
-
 }
 
 func TestAccWebApp_complete(t *testing.T) {

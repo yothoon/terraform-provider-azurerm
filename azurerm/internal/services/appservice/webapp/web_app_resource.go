@@ -241,7 +241,7 @@ func (r AppResource) Create() sdk.ResourceFunc {
 				return fmt.Errorf("checking name availability for %s: %+v", id, err)
 			}
 			if !*checkName.NameAvailable {
-				return fmt.Errorf("the Site Name %q failed the availabilty check: %+v", id.SiteName, *checkName.Message)
+				return fmt.Errorf("the Site Name %q failed the availability check: %+v", id.SiteName, *checkName.Message)
 			}
 
 			siteConfig, err := expandSiteConfig(webApp.SiteConfig)

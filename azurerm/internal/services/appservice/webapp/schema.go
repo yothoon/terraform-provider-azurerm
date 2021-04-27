@@ -728,7 +728,6 @@ func expandLogsConfig(config []LogsConfig) *web.SiteLogsConfig {
 				RetentionInDays: utils.Int32(int32(appLogsBlobs.RetentionInDays)),
 			}
 		}
-
 	}
 
 	if len(logsConfig.HttpLogs) == 1 {
@@ -802,7 +801,7 @@ func expandStorageConfig(storageConfigs []StorageAccount) *web.AzureStoragePrope
 	if len(storageConfigs) == 0 {
 		return nil
 	}
-	storageAccounts := make(map[string]*web.AzureStorageInfoValue, 0)
+	storageAccounts := make(map[string]*web.AzureStorageInfoValue)
 	for _, v := range storageConfigs {
 		storageAccounts[v.Name] = &web.AzureStorageInfoValue{
 			Type:        web.AzureStorageType(v.Type),
@@ -822,7 +821,7 @@ func expandConnectionStrings(connectionStringsConfig []ConnectionString) *web.Co
 	if len(connectionStringsConfig) == 0 {
 		return nil
 	}
-	connectionStrings := make(map[string]*web.ConnStringValueTypePair, 0)
+	connectionStrings := make(map[string]*web.ConnStringValueTypePair)
 	for _, v := range connectionStringsConfig {
 		connectionStrings[v.Name] = &web.ConnStringValueTypePair{
 			Value: utils.String(v.Value),
@@ -1110,7 +1109,7 @@ func flattenConnectionStrings(appConnectionStrings web.ConnectionStringDictionar
 }
 
 func expandAppSettings(settings map[string]string) *web.StringDictionary {
-	appSettings := make(map[string]*string, 0)
+	appSettings := make(map[string]*string)
 	for k, v := range settings {
 		appSettings[k] = utils.String(v)
 	}
