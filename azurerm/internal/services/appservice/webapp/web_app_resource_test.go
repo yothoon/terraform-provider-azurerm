@@ -274,7 +274,8 @@ resource "azurerm_web_app" "test" {
   service_plan_id     = azurerm_app_service_plan.test.id
 
   app_settings = {
-    foo = "bar"
+    foo    = "bar"
+    SECRET = "sauce"
   }
 
   auth_settings {

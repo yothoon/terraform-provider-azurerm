@@ -567,6 +567,13 @@ func (r AppResource) Update() sdk.ResourceFunc {
 				return fmt.Errorf("updating Web App %s: %+v", id, err)
 			}
 
+			// (@jackofallops) - App Settings can clobber logs configuration so must be updated before we send any Log updates
+			if appSettingsUpdate := expandAppSettings(state.AppSettings); appSettingsUpdate != nil {
+				if _, err := client.UpdateApplicationSettings(ctx, id.ResourceGroup, id.SiteName, *appSettingsUpdate); err != nil {
+					return fmt.Errorf("updating App Settings for Web App %s: %+v", id, err)
+				}
+			}
+
 			if connectionStringUpdate := expandConnectionStrings(state.ConnectionStrings); connectionStringUpdate != nil {
 				if _, err := client.UpdateConnectionStrings(ctx, id.ResourceGroup, id.SiteName, *connectionStringUpdate); err != nil {
 					return fmt.Errorf("updating Connection Strings for Web App %s: %+v", id, err)
