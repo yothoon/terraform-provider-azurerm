@@ -6,7 +6,7 @@ import (
 
 	msiParse "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/msi/parse"
 
-	"github.com/Azure/azure-sdk-for-go/services/web/mgmt/2020-06-01/web"
+	"github.com/Azure/azure-sdk-for-go/services/web/mgmt/2020-12-01/web"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/msi/validate"
@@ -368,8 +368,7 @@ func AuthSettingsSchema() *schema.Schema {
 					ValidateFunc: validation.StringInSlice([]string{
 						string(web.BuiltInAuthenticationProviderAzureActiveDirectory),
 						string(web.BuiltInAuthenticationProviderFacebook),
-						// TODO: add GitHub Auth when API bump merged
-						// string(web.BuiltInAuthenticationProviderGithub),
+						string(web.BuiltInAuthenticationProviderGithub),
 						string(web.BuiltInAuthenticationProviderGoogle),
 						string(web.BuiltInAuthenticationProviderMicrosoftAccount),
 						string(web.BuiltInAuthenticationProviderTwitter),
