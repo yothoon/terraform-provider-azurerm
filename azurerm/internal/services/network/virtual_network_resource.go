@@ -94,6 +94,7 @@ func resourceVirtualNetwork() *schema.Resource {
 			"dns_servers": {
 				Type:     schema.TypeList,
 				Optional: true,
+				Computed: true,
 				Elem: &schema.Schema{
 					Type:         schema.TypeString,
 					ValidateFunc: validation.StringIsNotEmpty,
