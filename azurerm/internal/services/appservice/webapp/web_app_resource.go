@@ -36,7 +36,6 @@ type AppModel struct {
 	HttpsOnly                     bool                     `tfschema:"https_only"`
 	Identity                      []helpers.Identity       `tfschema:"identity"`
 	LogsConfig                    []LogsConfig             `tfschema:"logs"`
-	ApplicationStack              []ApplicationStack       `tfschema:"application_stack"`
 	MetaData                      map[string]string        `tfschema:"app_metadata"`
 	SiteConfig                    []SiteConfig             `tfschema:"site_config"`
 	StorageAccounts               []StorageAccount         `tfschema:"storage_account"`
@@ -84,8 +83,6 @@ func (r AppResource) Arguments() map[string]*schema.Schema {
 				Type: schema.TypeString,
 			},
 		},
-
-		"application_stack": applicationStackSchema(),
 
 		"auth_settings": helpers.AuthSettingsSchema(),
 
@@ -260,6 +257,7 @@ func (r AppResource) Create() sdk.ResourceFunc {
 			if servicePlan.Kind != nil {
 				kind = *servicePlan.Kind
 			}
+
 			siteConfig, err := expandSiteConfig(webApp.SiteConfig, kind)
 			if err != nil {
 				return err
