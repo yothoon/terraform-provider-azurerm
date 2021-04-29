@@ -6,12 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/location"
-
 	"github.com/Azure/azure-sdk-for-go/services/web/mgmt/2020-12-01/web"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/azure"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/location"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/sdk"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/appservice/helpers"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/appservice/parse"
@@ -37,6 +36,8 @@ type AppModel struct {
 	HttpsOnly                     bool                     `tfschema:"https_only"`
 	Identity                      []helpers.Identity       `tfschema:"identity"`
 	LogsConfig                    []LogsConfig             `tfschema:"logs"`
+	ApplicationStack              []ApplicationStack       `tfschema:"application_stack"`
+	MetaData                      map[string]string        `tfschema:"app_metadata"`
 	SiteConfig                    []SiteConfig             `tfschema:"site_config"`
 	StorageAccounts               []StorageAccount         `tfschema:"storage_account"`
 	ConnectionStrings             []ConnectionString       `tfschema:"connection_string"`
@@ -83,6 +84,8 @@ func (r AppResource) Arguments() map[string]*schema.Schema {
 				Type: schema.TypeString,
 			},
 		},
+
+		"application_stack": applicationStackSchema(),
 
 		"auth_settings": helpers.AuthSettingsSchema(),
 
@@ -152,6 +155,15 @@ func (r AppResource) Attributes() map[string]*schema.Schema {
 		"kind": {
 			Type:     schema.TypeString,
 			Computed: true,
+		},
+
+		"app_metadata": {
+			Type:     schema.TypeMap,
+			Computed: true,
+			Elem: &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 		},
 
 		"outbound_ip_addresses": {
@@ -244,7 +256,11 @@ func (r AppResource) Create() sdk.ResourceFunc {
 				return fmt.Errorf("the Site Name %q failed the availability check: %+v", id.SiteName, *checkName.Message)
 			}
 
-			siteConfig, err := expandSiteConfig(webApp.SiteConfig)
+			kind := ""
+			if servicePlan.Kind != nil {
+				kind = *servicePlan.Kind
+			}
+			siteConfig, err := expandSiteConfig(webApp.SiteConfig, kind)
 			if err != nil {
 				return err
 			}
@@ -263,8 +279,7 @@ func (r AppResource) Create() sdk.ResourceFunc {
 				},
 			}
 
-			identity := helpers.ExpandIdentity(webApp.Identity)
-			if identity != nil {
+			if identity := helpers.ExpandIdentity(webApp.Identity); identity != nil {
 				siteEnvelope.Identity = identity
 			}
 
@@ -533,6 +548,8 @@ func (r AppResource) Update() sdk.ResourceFunc {
 		Timeout: 30 * time.Minute,
 		Func: func(ctx context.Context, metadata sdk.ResourceMetaData) error {
 			client := metadata.Client.AppService.WebAppsClient
+			servicePlanClient := metadata.Client.AppService.ServicePlanClient
+
 			id, err := parse.WebAppID(metadata.ResourceData.Id())
 			if err != nil {
 				return err
@@ -557,7 +574,23 @@ func (r AppResource) Update() sdk.ResourceFunc {
 				Identity: helpers.ExpandIdentity(state.Identity),
 			}
 
-			siteConfig, err := expandSiteConfig(state.SiteConfig)
+			servicePlanId, err := parse.ServicePlanID(state.ServicePlanId)
+			if err != nil {
+				return err
+			}
+
+			servicePlan, err := servicePlanClient.Get(ctx, servicePlanId.ResourceGroup, servicePlanId.ServerfarmName)
+			if err != nil {
+				return fmt.Errorf("reading App %s: %+v", servicePlanId, err)
+			}
+
+			kind := ""
+			if servicePlan.Kind != nil {
+				kind = *servicePlan.Kind
+			}
+
+			siteConfig, err := expandSiteConfig(state.SiteConfig, kind)
+
 			if err != nil {
 				return fmt.Errorf("expanding Site Config for Web App %s: %+v", id, err)
 			}

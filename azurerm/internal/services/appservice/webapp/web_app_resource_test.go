@@ -16,15 +16,34 @@ import (
 
 type WebAppResource struct{}
 
-func TestAccWebApp_basic(t *testing.T) {
+const osTypeWindows = "Windows"
+const osTypeLinux = "Linux"
+
+func TestAccWebApp_basicWindows(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
 	r := WebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.basic(data),
+			Config: r.basic(data, osTypeWindows),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccWebApp_basicLinux(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
+	r := WebAppResource{}
+
+	data.ResourceTest(t, r, []resource.TestStep{
+		{
+			Config: r.basic(data, osTypeLinux),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("kind").HasValue("app,linux"),
 			),
 		},
 		data.ImportStep(),
@@ -37,7 +56,7 @@ func TestAccWebApp_requiresImport(t *testing.T) {
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.basic(data),
+			Config: r.basic(data, osTypeWindows),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -46,13 +65,13 @@ func TestAccWebApp_requiresImport(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_complete(t *testing.T) {
+func TestAccWebApp_completeWindows(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
 	r := WebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.complete(data),
+			Config: r.completeWindows(data),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -67,7 +86,7 @@ func TestAccWebApp_completeUpdated(t *testing.T) {
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.complete(data),
+			Config: r.completeWindows(data),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -102,7 +121,7 @@ func (r WebAppResource) Exists(ctx context.Context, client *clients.Client, stat
 	return utils.Bool(true), nil
 }
 
-func (r WebAppResource) basic(data acceptance.TestData) string {
+func (r WebAppResource) basic(data acceptance.TestData, osType string) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -116,10 +135,10 @@ resource "azurerm_web_app" "test" {
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
 }
-`, r.template(data), data.RandomInteger)
+`, r.template(data, osType), data.RandomInteger)
 }
 
-func (r WebAppResource) complete(data acceptance.TestData) string {
+func (r WebAppResource) completeWindows(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -256,7 +275,7 @@ resource "azurerm_web_app" "test" {
     foo = "bar"
   }
 }
-`, r.templateWithStorageAccount(data), data.RandomInteger, data.Client().TenantID)
+`, r.templateWithStorageAccount(data, osTypeWindows), data.RandomInteger, data.Client().TenantID)
 }
 
 func (r WebAppResource) completeUpdate(data acceptance.TestData) string {
@@ -391,7 +410,7 @@ resource "azurerm_web_app" "test" {
     foo = "bar"
   }
 }
-`, r.templateWithStorageAccount(data), data.RandomInteger, data.Client().TenantID)
+`, r.templateWithStorageAccount(data, "Windows"), data.RandomInteger, data.Client().TenantID)
 }
 
 func (r WebAppResource) requiresImport(data acceptance.TestData) string {
@@ -404,10 +423,10 @@ resource "azurerm_web_app" "import" {
   resource_group_name = azurerm_web_app.test.resource_group_name
   service_plan_id     = azurerm_web_app.test.service_plan_id
 }
-`, r.basic(data))
+`, r.basic(data, osTypeWindows))
 }
 
-func (WebAppResource) template(data acceptance.TestData) string {
+func (WebAppResource) template(data acceptance.TestData, osType string) string {
 	return fmt.Sprintf(`
 
 resource "azurerm_resource_group" "test" {
@@ -419,16 +438,18 @@ resource "azurerm_app_service_plan" "test" {
   name                = "acctestASP-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
+  kind                = "%s"
+  reserved            = %t
 
   sku {
     tier = "Standard"
     size = "S1"
   }
 }
-`, data.RandomInteger, data.Locations.Primary, data.RandomInteger)
+`, data.RandomInteger, data.Locations.Primary, data.RandomInteger, osType, osType == osTypeLinux)
 }
 
-func (r WebAppResource) templateWithStorageAccount(data acceptance.TestData) string {
+func (r WebAppResource) templateWithStorageAccount(data acceptance.TestData, osType string) string {
 	return fmt.Sprintf(`
 
 %s
@@ -489,5 +510,5 @@ data "azurerm_storage_account_sas" "test" {
     process = false
   }
 }
-`, r.template(data), data.RandomInteger, data.RandomString)
+`, r.template(data, osType), data.RandomInteger, data.RandomString)
 }

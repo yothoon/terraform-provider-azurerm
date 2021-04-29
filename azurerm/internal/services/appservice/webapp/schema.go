@@ -1,6 +1,7 @@
 package webapp
 
 import (
+	"strings"
 	"time"
 
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/appservice/helpers"
@@ -17,30 +18,37 @@ import (
 // TODO - Stack handling
 
 type SiteConfig struct {
-	AlwaysOn                bool                    `tfschema:"always_on"`
-	ApiManagementConfigId   string                  `tfschema:"api_management_config_id"`
-	AppCommandLine          string                  `tfschema:"app_command_line"`
-	DefaultDocuments        []string                `tfschema:"default_documents"`
+	AlwaysOn              bool     `tfschema:"always_on"`
+	ApiManagementConfigId string   `tfschema:"api_management_config_id"`
+	AppCommandLine        string   `tfschema:"app_command_line"`
+	DefaultDocuments      []string `tfschema:"default_documents"`
+	// DetailedErrorLogging bool `tfschema:"detailed_error_logging"` // TODO - New field to support, defaults to `false`
 	Http2Enabled            bool                    `tfschema:"http2_enabled"`
 	IpRestriction           []helpers.IpRestriction `tfschema:"ip_restriction"`
 	ScmUseMainIpRestriction bool                    `tfschema:"scm_use_main_ip_restriction"`
 	ScmIpRestriction        []helpers.IpRestriction `tfschema:"scm_ip_restriction"`
-	LocalMysql              bool                    `tfschema:"local_mysql"`
-	ManagedPipelineMode     string                  `tfschema:"managed_pipeline_mode"`
-	RemoteDebugging         bool                    `tfschema:"remote_debugging"`
-	RemoteDebuggingVersion  string                  `tfschema:"remote_debugging_version"`
-	ScmType                 string                  `tfschema:"scm_type"`
-	Use32BitWorker          bool                    `tfschema:"use_32_bit_worker"`
-	WebSockets              bool                    `tfschema:"websockets"`
-	FtpsState               string                  `tfschema:"ftps_state"`
-	HealthCheckPath         string                  `tfschema:"health_check_path"`
-	NumberOfWorkers         int                     `tfschema:"number_of_workers"`
-	LinuxFxVersion          string                  `tfschema:"linux_fx_version"`
-	WindowsFxVersion        string                  `tfschema:"windows_fx_version"`
-	MinTlsVersion           string                  `tfschema:"minimum_tls_version"`
-	ScmMinTlsVersion        string                  `tfschema:"scm_minimum_tls_version"`
-	AutoSwapSlotName        string                  `tfschema:"auto_swap_slot_name"`
-	Cors                    []helpers.CorsSetting   `tfschema:"cors"`
+	// LoadBalancing string `tfschema:"load_balancing_mode"` // TODO - New field to support, defaults to `LeastRequests`
+	LocalMysql             bool                  `tfschema:"local_mysql"`
+	ManagedPipelineMode    string                `tfschema:"managed_pipeline_mode"`
+	RemoteDebugging        bool                  `tfschema:"remote_debugging"`
+	RemoteDebuggingVersion string                `tfschema:"remote_debugging_version"`
+	ScmType                string                `tfschema:"scm_type"`
+	Use32BitWorker         bool                  `tfschema:"use_32_bit_worker"`
+	WebSockets             bool                  `tfschema:"websockets"`
+	FtpsState              string                `tfschema:"ftps_state"`
+	HealthCheckPath        string                `tfschema:"health_check_path"`
+	NumberOfWorkers        int                   `tfschema:"number_of_workers"`
+	LinuxFxVersion         string                `tfschema:"linux_fx_version"`
+	WindowsFxVersion       string                `tfschema:"windows_fx_version"`
+	MinTlsVersion          string                `tfschema:"minimum_tls_version"`
+	ScmMinTlsVersion       string                `tfschema:"scm_minimum_tls_version"`
+	AutoSwapSlotName       string                `tfschema:"auto_swap_slot_name"`
+	Cors                   []helpers.CorsSetting `tfschema:"cors"`
+	// Push  []PushSetting `tfschema:"push"` // TODO - new block to (possibly) support?
+	// SiteLimits []SiteLimitsSettings `tfschema:"site_limits"` // TODO - New block to (possibly) support?
+	// VirtualApplications []VirtualApplications //TODO - New (computed?) block to (possibly) support?
+	// Stacks
+	NetFrameworkVersion string `tfschema:"dotnet_framework_version"`
 	// TODO fields
 	// AutoHeal bool
 	// AutoHealRules []AutoHealRule
@@ -78,6 +86,12 @@ func siteConfigSchema() *schema.Schema {
 					Elem: &schema.Schema{
 						Type: schema.TypeString,
 					},
+				},
+
+				"dotnet_framework_version": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					ValidateFunc: validation.StringInSlice([]string{}, false),
 				},
 
 				"http2_enabled": {
@@ -173,12 +187,18 @@ func siteConfigSchema() *schema.Schema {
 					Type:     schema.TypeString,
 					Optional: true,
 					Computed: true,
+					ConflictsWith: []string{
+						"site_config.0.windows_fx_version",
+					},
 				},
 
 				"windows_fx_version": {
 					Type:     schema.TypeString,
 					Optional: true,
 					Computed: true,
+					ConflictsWith: []string{
+						"site_config.0.linux_fx_version",
+					},
 				},
 
 				"minimum_tls_version": {
@@ -209,6 +229,113 @@ func siteConfigSchema() *schema.Schema {
 					Type:     schema.TypeString,
 					Optional: true,
 					// TODO - Add slot name validation here?
+				},
+			},
+		},
+	}
+}
+
+type ApplicationStack struct {
+	NetFrameworkVersion  string `tfschema:"dotnet_framework_version"`
+	PhpVersion           string `tfschema:"php_version"`
+	PythonVersion        string `tfschema:"python_version"` // Linux Only
+	NodeVersion          string `tfschema:"node_version"`
+	PowerShellVersion    string `tfschema:"powershell_version"`
+	JavaVersion          string `tfschema:"java_version"`
+	JavaContainer        string `tfschema:"java_container"`
+	JavaContainerVersion string `tfschema:"java_container_version"`
+}
+
+func applicationStackSchema() *schema.Schema {
+	return &schema.Schema{
+		Type:     schema.TypeList,
+		Optional: true,
+		Computed: true,
+		MaxItems: 1,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"dotnet_framework_version": {
+					Type:     schema.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"", // TODO - Valid strings are....?
+					}, false),
+					ExactlyOneOf: []string{
+						"application_stack.0.dotnet_framework_version",
+						"application_stack.0.php_version",
+						"application_stack.0.python_version",
+						"application_stack.0.node_version",
+						"application_stack.0.powershell_version",
+						"application_stack.0.java_version",
+						"application_stack.0.java_container_version",
+					},
+				},
+
+				"php_version": {
+					Type:     schema.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"7.3",
+						"7.4",
+					}, false),
+				},
+
+				"python_version": {
+					Type:     schema.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"3.6",
+						"3.7",
+						"3.8",
+					}, false),
+				},
+
+				"node_version": {
+					Type:     schema.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"10.1",   // Linux Only
+						"10.6",   // Linux Only
+						"10.10",  // Linux Only
+						"10.14",  // Linux Only
+						"10 LTS", // Linux Only
+						"12 LTS",
+						"14 LTS",
+					}, false),
+				},
+
+				"powershell_version": {
+					Type:     schema.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"", // TODO - Valid strings are....?
+					}, false),
+				},
+
+				"java_version": {
+					Type:     schema.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"", // TODO - Valid strings are....?
+					}, false),
+				},
+
+				"java_container": {Type: schema.TypeString,
+					Optional: true,
+					Computed: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"JAVA",
+						"JETTY", // Linux Only
+						"TOMCAT",
+					}, false),
+				},
+
+				"java_container_version": {
+					Type:     schema.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"", // TODO - Valid strings are....?
+					}, false),
 				},
 			},
 		},
@@ -598,7 +725,7 @@ func httpLogBlobStorageSchema() *schema.Schema {
 	}
 }
 
-func expandSiteConfig(siteConfig []SiteConfig) (*web.SiteConfig, error) {
+func expandSiteConfig(siteConfig []SiteConfig, kind string) (*web.SiteConfig, error) {
 	if len(siteConfig) == 0 {
 		return nil, nil
 	}
@@ -675,11 +802,11 @@ func expandSiteConfig(siteConfig []SiteConfig) (*web.SiteConfig, error) {
 			expanded.NumberOfWorkers = utils.Int32(int32(v.NumberOfWorkers))
 		}
 
-		if v.LinuxFxVersion != "" {
+		if strings.EqualFold(kind, "linux") {
 			expanded.LinuxFxVersion = utils.String(v.LinuxFxVersion)
 		}
 
-		if v.WindowsFxVersion != "" {
+		if strings.EqualFold(kind, "Windows") {
 			expanded.WindowsFxVersion = utils.String(v.WindowsFxVersion)
 		}
 
