@@ -54,6 +54,10 @@ type AppModel struct {
 var _ sdk.Resource = AppResource{}
 var _ sdk.ResourceWithUpdate = AppResource{}
 
+// TODO - Feature: Deployments (Preview)?
+// TODO - Feature: App Insights?
+// TODO - Feature: Auto healing?
+
 func (r AppResource) Arguments() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"name": {

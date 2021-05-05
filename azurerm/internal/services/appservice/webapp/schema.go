@@ -1,6 +1,7 @@
 package webapp
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -224,14 +225,16 @@ func siteConfigSchema() *schema.Schema {
 }
 
 type WindowsApplicationStack struct {
-	NetFrameworkVersion  string `tfschema:"dotnet_framework_version"`
-	PhpVersion           string `tfschema:"php_version"`
-	JavaVersion          string `tfschema:"java_version"`
-	PythonVersion        string `tfschema:"python_version"` // Linux Only
-	NodeVersion          string `tfschema:"node_version"`
-	JavaContainer        string `tfschema:"java_container"`
-	JavaContainerVersion string `tfschema:"java_container_version"`
-	// PowerShellVersion    string `tfschema:"powershell_version"` // Function Apps Only...
+	NetFrameworkVersion     string `tfschema:"dotnet_framework_version"`
+	PhpVersion              string `tfschema:"php_version"`
+	JavaVersion             string `tfschema:"java_version"`
+	PythonVersion           string `tfschema:"python_version"` // Linux Only?
+	NodeVersion             string `tfschema:"node_version"`
+	JavaContainer           string `tfschema:"java_container"`
+	JavaContainerVersion    string `tfschema:"java_container_version"`
+	DockerContainerName     string `tfschema:"docker_container_name"`
+	DockerContainerRegistry string `tfschema:"docker_container_registry"`
+	DockerContainerTag      string `tfschema:"docker_container_tag"`
 }
 
 // Version information for the below validations was taken in part from - https://github.com/Azure/app-service-linux-docs/tree/master/Runtime_Support
@@ -253,16 +256,6 @@ func windowsApplicationStackSchema() *schema.Schema {
 						"v4.0",
 						"v5.0",
 					}, false),
-					//ExactlyOneOf: []string{
-					//	"application_stack.0.dotnet_framework_version",
-					//	"application_stack.0.dotnetcore_framework_version",
-					//	"application_stack.0.php_version",
-					//	"application_stack.0.python_version",
-					//	"application_stack.0.node_version",
-					//	"application_stack.0.powershell_version",
-					//	"application_stack.0.java_version",
-					//	"application_stack.0.java_container_version",
-					//},
 				},
 
 				"php_version": {
@@ -274,89 +267,42 @@ func windowsApplicationStackSchema() *schema.Schema {
 						"7.3",
 						"7.4",
 					}, false),
-					//ExactlyOneOf: []string{
-					//	"application_stack.0.dotnet_framework_version",
-					//	"application_stack.0.php_version",
-					//	"application_stack.0.python_version",
-					//	"application_stack.0.node_version",
-					//	"application_stack.0.powershell_version",
-					//	"application_stack.0.java_version",
-					//},
 				},
 
 				"python_version": {
 					Type:     schema.TypeString,
 					Optional: true,
 					ValidateFunc: validation.StringInSlice([]string{
-						"2.7", // Windows supported?
-						"3.6", // Both
-						"3.7", // Linux Only
-						"3.8", // Linux Only?
+						"2.7", // 3.x is "default" and results in empty string return, because... ¯\_(ツ)_/¯
 					}, false),
-					//ExactlyOneOf: []string{
-					//	"application_stack.0.dotnet_framework_version",
-					//	"application_stack.0.php_version",
-					//	"application_stack.0.python_version",
-					//	"application_stack.0.node_version",
-					//	"application_stack.0.powershell_version",
-					//	"application_stack.0.java_version",
-					//},
 				},
 
-				"node_version": {
+				"node_version": { // Discarded by service if JavaVersion is specified
 					Type:     schema.TypeString,
 					Optional: true,
 					ValidateFunc: validation.StringInSlice([]string{
-						"10.1",   // Linux Only
-						"10.6",   // Linux Only
-						"10.10",  // Linux Only
-						"10.14",  // Linux Only
-						"10-LTS", // Linux Only
+						"10.1",   // Linux Only?
+						"10.6",   // Linux Only?
+						"10.10",  // Linux Only?
+						"10.14",  // Linux Only?
+						"10-LTS", // Linux Only?
 						"12-LTS",
 						"14-LTS",
 					}, false),
-					//ExactlyOneOf: []string{
-					//	"application_stack.0.dotnet_framework_version",
-					//	"application_stack.0.php_version",
-					//	"application_stack.0.python_version",
-					//	"application_stack.0.node_version",
-					//	"application_stack.0.powershell_version",
-					//	"application_stack.0.java_version",
-					//},
+					ConflictsWith: []string{
+						"site_config.0.windows_application_stack.0.java_version",
+					},
 				},
-				// TODO - powershell is Function App only - leaving here as signpost for later
-				// "powershell_version": {
-				//	Type:     schema.TypeString,
-				//	Optional: true,
-				//	ValidateFunc: validation.StringInSlice([]string{
-				//		"", // TODO - Valid strings are....?
-				//	}, false),
-				//	ExactlyOneOf: []string{
-				//		"application_stack.0.dotnet_framework_version",
-				//		"application_stack.0.php_version",
-				//		"application_stack.0.python_version",
-				//		"application_stack.0.node_version",
-				//		"application_stack.0.powershell_version",
-				//		"application_stack.0.java_version",
-				//	},
-				// },
 
 				"java_version": {
 					Type:     schema.TypeString,
 					Optional: true,
+					Computed: true,
 					ValidateFunc: validation.StringInSlice([]string{
-						"1.7", // Windows Only
+						"1.7",
 						"1.8",
 						"11",
 					}, false),
-					//ExactlyOneOf: []string{
-					//	"application_stack.0.dotnet_framework_version",
-					//	"application_stack.0.php_version",
-					//	"application_stack.0.python_version",
-					//	"application_stack.0.node_version",
-					//	"application_stack.0.powershell_version",
-					//	"application_stack.0.java_version",
-					//},
 				},
 
 				"java_container": {Type: schema.TypeString,
@@ -367,28 +313,48 @@ func windowsApplicationStackSchema() *schema.Schema {
 						"JETTY",
 						"TOMCAT",
 					}, false),
-					//ConflictsWith: []string{
-					//	"application_stack.0.dotnet_framework_version",
-					//	"application_stack.0.php_version",
-					//	"application_stack.0.python_version",
-					//	"application_stack.0.node_version",
-					//	"application_stack.0.powershell_version",
-					//},
+					RequiredWith: []string{
+						"site_config.0.windows_application_stack.0.java_container_version",
+					},
 				},
 
 				"java_container_version": {
 					Type:     schema.TypeString,
 					Optional: true,
+					Computed: true,
 					RequiredWith: []string{
 						"site_config.0.windows_application_stack.0.java_container",
 					},
-					//ConflictsWith: []string{
-					//	"application_stack.0.dotnet_framework_version",
-					//	"application_stack.0.php_version",
-					//	"application_stack.0.python_version",
-					//	"application_stack.0.node_version",
-					//	"application_stack.0.powershell_version",
-					//},
+				},
+
+				"docker_container_name": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					ValidateFunc: validation.StringIsNotEmpty,
+					RequiredWith: []string{
+						"site_config.0.windows_application_stack.0.docker_container_registry",
+						"site_config.0.windows_application_stack.0.docker_container_tag",
+					},
+				},
+
+				"docker_container_registry": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					ValidateFunc: validation.StringIsNotEmpty,
+					RequiredWith: []string{
+						"site_config.0.windows_application_stack.0.docker_container_name",
+						"site_config.0.windows_application_stack.0.docker_container_tag",
+					},
+				},
+
+				"docker_container_tag": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					ValidateFunc: validation.StringIsNotEmpty,
+					RequiredWith: []string{
+						"site_config.0.windows_application_stack.0.docker_container_name",
+						"site_config.0.windows_application_stack.0.docker_container_registry",
+					},
 				},
 			},
 		},
@@ -826,6 +792,10 @@ func expandSiteConfig(siteConfig []SiteConfig, kind string) (*web.SiteConfig, er
 			if winAppStack.JavaContainerVersion != "" {
 				expanded.JavaContainerVersion = utils.String(winAppStack.JavaContainerVersion)
 			}
+
+			if winAppStack.DockerContainerName != "" {
+				expanded.WindowsFxVersion = utils.String(fmt.Sprintf("DOCKER|%s/%s:%s", winAppStack.DockerContainerRegistry, winAppStack.DockerContainerName, winAppStack.DockerContainerTag))
+			}
 		}
 
 		if len(v.DefaultDocuments) != 0 {
@@ -891,10 +861,10 @@ func expandSiteConfig(siteConfig []SiteConfig, kind string) (*web.SiteConfig, er
 			expanded.LinuxFxVersion = utils.String("")
 		}
 
-		if strings.EqualFold(kind, "Windows") {
-			// `WindowsFxVersion` is only for Docker Image specification, which we need to collect from app_settings
-			expanded.WindowsFxVersion = utils.String("")
-		}
+		//if strings.EqualFold(kind, "Windows") {
+		//	// `WindowsFxVersion` is only for Docker Image specification, which we need to collect from app_settings
+		//	expanded.WindowsFxVersion = utils.String("")
+		//}
 
 		if v.MinTlsVersion != "" {
 			expanded.MinTLSVersion = web.SupportedTLSVersions(v.MinTlsVersion)
@@ -959,7 +929,7 @@ func expandLogsConfig(config []LogsConfig) *web.SiteLogsConfig {
 		if len(httpLogs.AzureBlobStorage) == 1 {
 			httpLogsBlobStorage := httpLogs.AzureBlobStorage[0]
 			siteLogsConfig.HTTPLogs.AzureBlobStorage = &web.AzureBlobStorageHTTPLogsConfig{
-				Enabled:         utils.Bool(true),
+				Enabled:         utils.Bool(httpLogsBlobStorage.SasUrl != ""),
 				SasURL:          utils.String(httpLogsBlobStorage.SasUrl),
 				RetentionInDays: utils.Int32(int32(httpLogsBlobStorage.RetentionInDays)),
 			}
@@ -1271,14 +1241,20 @@ func flattenSiteConfig(appSiteConfig *web.SiteConfig) []SiteConfig {
 		winAppStack.JavaContainerVersion = *appSiteConfig.JavaContainerVersion
 	}
 
+	if appSiteConfig.WindowsFxVersion != nil {
+		siteConfig.WindowsFxVersion = *appSiteConfig.WindowsFxVersion
+		// Decode the string to docker values
+		parts := strings.Split(strings.TrimPrefix(siteConfig.WindowsFxVersion, "DOCKER|"), ":")
+		winAppStack.DockerContainerTag = parts[1]
+		path := strings.Split(parts[0], "/")
+		winAppStack.DockerContainerRegistry = path[0]
+		winAppStack.DockerContainerName = strings.TrimPrefix(parts[0], fmt.Sprintf("%s/", path[0]))
+	}
+
 	siteConfig.WindowsApplicationStack = []WindowsApplicationStack{winAppStack}
 
 	if appSiteConfig.LinuxFxVersion != nil {
 		siteConfig.LinuxFxVersion = *appSiteConfig.LinuxFxVersion
-	}
-
-	if appSiteConfig.WindowsFxVersion != nil {
-		siteConfig.WindowsFxVersion = *appSiteConfig.WindowsFxVersion
 	}
 
 	if appSiteConfig.AutoSwapSlotName != nil {
