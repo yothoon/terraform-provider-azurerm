@@ -31,6 +31,41 @@ func TestAccWindowsWebApp_basic(t *testing.T) {
 	})
 }
 
+func TestAccWindowsWebApp_detailedLogging(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
+
+	data.ResourceTest(t, r, []resource.TestStep{
+		{
+			Config: r.detailedErrorLogging(data, false),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("site_config.0.detailed_error_logging").HasValue("false"),
+				check.That(data.ResourceName).Key("logs.0.detailed_error_messages").HasValue("false"),
+			),
+		},
+		data.ImportStep(),
+		{
+			Config: r.detailedErrorLogging(data, true),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("site_config.0.detailed_error_logging").HasValue("true"),
+				check.That(data.ResourceName).Key("logs.0.detailed_error_messages").HasValue("true"),
+			),
+		},
+		data.ImportStep(),
+		{
+			Config: r.detailedErrorLogging(data, false),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("site_config.0.detailed_error_logging").HasValue("false"),
+				check.That(data.ResourceName).Key("logs.0.detailed_error_messages").HasValue("false"),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
 func TestAccWindowsWebApp_requiresImport(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
 	r := WindowsWebAppResource{}
@@ -412,12 +447,33 @@ provider "azurerm" {
 %s
 
 resource "azurerm_windows_web_app" "test" {
-  name                = "acctestAS-%d"
+  name                = "acctestWA-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
 }
 `, r.baseTemplate(data), data.RandomInteger)
+}
+
+func (r WindowsWebAppResource) detailedErrorLogging(data acceptance.TestData, detailedErrorLogging bool) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+%s
+
+resource "azurerm_windows_web_app" "test" {
+  name                = "acctestWA-%d"
+  location            = azurerm_resource_group.test.location
+  resource_group_name = azurerm_resource_group.test.name
+  service_plan_id     = azurerm_app_service_plan.test.id
+
+  logs {
+    detailed_error_messages = %t
+  }
+}
+`, r.baseTemplate(data), data.RandomInteger, detailedErrorLogging)
 }
 
 func (r WindowsWebAppResource) complete(data acceptance.TestData) string {
@@ -429,7 +485,7 @@ provider "azurerm" {
 %s
 
 resource "azurerm_windows_web_app" "test" {
-  name                = "acctestAS-%d"
+  name                = "acctestWA-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
@@ -526,6 +582,7 @@ resource "azurerm_windows_web_app" "test" {
       "third.aspx",
       "hostingstart.html",
     ]
+    detailed_error_logging      = true
     http2_enabled               = true
     scm_use_main_ip_restriction = true
     local_mysql                 = true
@@ -576,7 +633,7 @@ provider "azurerm" {
 %s
 
 resource "azurerm_windows_web_app" "test" {
-  name                = "acctestAS-%d"
+  name                = "acctestWA-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
@@ -669,9 +726,10 @@ resource "azurerm_windows_web_app" "test" {
       "third.aspx",
       "hostingstart.html",
     ]
-    http2_enabled               = true
-    scm_use_main_ip_restriction = true
-    local_mysql                 = true
+    detailed_error_logging      = false
+    http2_enabled               = false
+    scm_use_main_ip_restriction = false
+    local_mysql                 = false
     managed_pipeline_mode       = "Integrated"
     remote_debugging            = true
     remote_debugging_version    = "VS2017"
@@ -929,7 +987,7 @@ provider "azurerm" {
 %s
 
 resource "azurerm_windows_web_app" "test" {
-  name                = "acctestAS-%d"
+  name                = "acctestWA-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id

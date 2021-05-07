@@ -256,12 +256,7 @@ func (r LinuxWebAppResource) Create() sdk.ResourceFunc {
 				return fmt.Errorf("the Site Name %q failed the availability check: %+v", id.SiteName, *checkName.Message)
 			}
 
-			kind := ""
-			if servicePlan.Kind != nil {
-				kind = *servicePlan.Kind
-			}
-
-			siteConfig, err := expandSiteConfigLinux(webApp.SiteConfig, kind)
+			siteConfig, err := expandSiteConfigLinux(webApp.SiteConfig)
 			if err != nil {
 				return err
 			}
@@ -549,7 +544,6 @@ func (r LinuxWebAppResource) Update() sdk.ResourceFunc {
 		Timeout: 30 * time.Minute,
 		Func: func(ctx context.Context, metadata sdk.ResourceMetaData) error {
 			client := metadata.Client.AppService.WebAppsClient
-			servicePlanClient := metadata.Client.AppService.ServicePlanClient
 
 			id, err := parse.WebAppID(metadata.ResourceData.Id())
 			if err != nil {
@@ -575,23 +569,7 @@ func (r LinuxWebAppResource) Update() sdk.ResourceFunc {
 				Identity: helpers.ExpandIdentity(state.Identity),
 			}
 
-			servicePlanId, err := parse.ServicePlanID(state.ServicePlanId)
-			if err != nil {
-				return err
-			}
-
-			servicePlan, err := servicePlanClient.Get(ctx, servicePlanId.ResourceGroup, servicePlanId.ServerfarmName)
-			if err != nil {
-				return fmt.Errorf("reading App %s: %+v", servicePlanId, err)
-			}
-
-			kind := ""
-			if servicePlan.Kind != nil {
-				kind = *servicePlan.Kind
-			}
-
-			siteConfig, err := expandSiteConfigLinux(state.SiteConfig, kind)
-
+			siteConfig, err := expandSiteConfigLinux(state.SiteConfig)
 			if err != nil {
 				return fmt.Errorf("expanding Site Config for Linux Web App %s: %+v", id, err)
 			}

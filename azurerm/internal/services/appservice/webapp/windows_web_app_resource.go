@@ -256,11 +256,6 @@ func (r WindowsWebAppResource) Create() sdk.ResourceFunc {
 				return fmt.Errorf("the Site Name %q failed the availability check: %+v", id.SiteName, *checkName.Message)
 			}
 
-			//kind := ""
-			//if servicePlan.Kind != nil {
-			//	kind = *servicePlan.Kind
-			//}
-
 			siteConfig, currentStack, err := expandSiteConfigWindows(webApp.SiteConfig)
 			if err != nil {
 				return err
@@ -279,12 +274,6 @@ func (r WindowsWebAppResource) Create() sdk.ResourceFunc {
 					ClientCertMode:        web.ClientCertMode(webApp.ClientCertMode),
 				},
 			}
-
-			//if siteConfig.WindowsFxVersion != nil {
-			//	// siteEnvelope.Kind = utils.String(fmt.Sprintf("%s,container,windows", kind))
-			//	// siteEnvelope.SiteProperties.IsXenon = utils.Bool(true) // deprecated?
-			//	siteEnvelope.SiteProperties.HyperV = utils.Bool(true)
-			//}
 
 			if identity := helpers.ExpandIdentity(webApp.Identity); identity != nil {
 				siteEnvelope.Identity = identity
@@ -572,7 +561,6 @@ func (r WindowsWebAppResource) Update() sdk.ResourceFunc {
 		Timeout: 30 * time.Minute,
 		Func: func(ctx context.Context, metadata sdk.ResourceMetaData) error {
 			client := metadata.Client.AppService.WebAppsClient
-			//servicePlanClient := metadata.Client.AppService.ServicePlanClient
 
 			id, err := parse.WebAppID(metadata.ResourceData.Id())
 			if err != nil {
@@ -598,24 +586,7 @@ func (r WindowsWebAppResource) Update() sdk.ResourceFunc {
 				Identity: helpers.ExpandIdentity(state.Identity),
 			}
 
-			//servicePlanId, err := parse.ServicePlanID(state.ServicePlanId)
-			//if err != nil {
-			//	return err
-			//}
-			//
-			//servicePlan, err := servicePlanClient.Get(ctx, servicePlanId.ResourceGroup, servicePlanId.ServerfarmName)
-			//if err != nil {
-			//	return fmt.Errorf("reading App %s: %+v", servicePlanId, err)
-			//}
-			//
-			//// TODO - need to work out updates for apps that are changed over to Docker...
-			//kind := ""
-			//if servicePlan.Kind != nil {
-			//	kind = *servicePlan.Kind
-			//}
-
 			siteConfig, currentStack, err := expandSiteConfigWindows(state.SiteConfig)
-
 			if err != nil {
 				return fmt.Errorf("expanding Site Config for Windows Web App %s: %+v", id, err)
 			}

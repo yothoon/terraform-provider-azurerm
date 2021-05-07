@@ -22,11 +22,10 @@ const osTypeWindows = "Windows"
 const osTypeLinux = "Linux"
 
 type SiteConfigWindows struct {
-	AlwaysOn              bool     `tfschema:"always_on"`
-	ApiManagementConfigId string   `tfschema:"api_management_config_id"`
-	AppCommandLine        string   `tfschema:"app_command_line"`
-	DefaultDocuments      []string `tfschema:"default_documents"`
-	// DetailedErrorLogging bool `tfschema:"detailed_error_logging"` // TODO - New field to support, defaults to `false`
+	AlwaysOn                bool                    `tfschema:"always_on"`
+	ApiManagementConfigId   string                  `tfschema:"api_management_config_id"`
+	AppCommandLine          string                  `tfschema:"app_command_line"`
+	DefaultDocuments        []string                `tfschema:"default_documents"`
 	Http2Enabled            bool                    `tfschema:"http2_enabled"`
 	IpRestriction           []helpers.IpRestriction `tfschema:"ip_restriction"`
 	ScmUseMainIpRestriction bool                    `tfschema:"scm_use_main_ip_restriction"`
@@ -47,6 +46,7 @@ type SiteConfigWindows struct {
 	ScmMinTlsVersion       string                    `tfschema:"scm_minimum_tls_version"`
 	AutoSwapSlotName       string                    `tfschema:"auto_swap_slot_name"`
 	Cors                   []helpers.CorsSetting     `tfschema:"cors"`
+	DetailedErrorLogging   bool                      `tfschema:"detailed_error_logging"`
 	LinuxFxVersion         string                    `tfschema:"linux_fx_version"`
 	WindowsFxVersion       string                    `tfschema:"windows_fx_version"`
 	// Push  []PushSetting `tfschema:"push"` // TODO - new block to (possibly) support?
@@ -59,11 +59,10 @@ type SiteConfigWindows struct {
 }
 
 type SiteConfigLinux struct {
-	AlwaysOn              bool     `tfschema:"always_on"`
-	ApiManagementConfigId string   `tfschema:"api_management_config_id"`
-	AppCommandLine        string   `tfschema:"app_command_line"`
-	DefaultDocuments      []string `tfschema:"default_documents"`
-	// DetailedErrorLogging bool `tfschema:"detailed_error_logging"` // TODO - New field to support, defaults to `false`
+	AlwaysOn                bool                    `tfschema:"always_on"`
+	ApiManagementConfigId   string                  `tfschema:"api_management_config_id"`
+	AppCommandLine          string                  `tfschema:"app_command_line"`
+	DefaultDocuments        []string                `tfschema:"default_documents"`
 	Http2Enabled            bool                    `tfschema:"http2_enabled"`
 	IpRestriction           []helpers.IpRestriction `tfschema:"ip_restriction"`
 	ScmUseMainIpRestriction bool                    `tfschema:"scm_use_main_ip_restriction"`
@@ -84,6 +83,7 @@ type SiteConfigLinux struct {
 	ScmMinTlsVersion       string                  `tfschema:"scm_minimum_tls_version"`
 	AutoSwapSlotName       string                  `tfschema:"auto_swap_slot_name"`
 	Cors                   []helpers.CorsSetting   `tfschema:"cors"`
+	DetailedErrorLogging   bool                    `tfschema:"detailed_error_logging"`
 	LinuxFxVersion         string                  `tfschema:"linux_fx_version"`
 	WindowsFxVersion       string                  `tfschema:"windows_fx_version"`
 	// Push  []PushSetting `tfschema:"push"` // TODO - new block to (possibly) support?
@@ -114,8 +114,6 @@ func siteConfigSchema(osType string) *schema.Schema {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-
-			"application_stack": windowsApplicationStackSchema(),
 
 			"default_documents": {
 				Type:     schema.TypeList,
@@ -243,6 +241,11 @@ func siteConfigSchema(osType string) *schema.Schema {
 				Type:     schema.TypeString,
 				Optional: true,
 				// TODO - Add slot name validation here?
+			},
+
+			"detailed_error_logging": {
+				Type:     schema.TypeBool,
+				Computed: true,
 			},
 
 			"linux_fx_version": {
@@ -937,265 +940,256 @@ func expandSiteConfigWindows(siteConfig []SiteConfigWindows) (*web.SiteConfig, *
 	expanded := &web.SiteConfig{}
 	currentStack := ""
 
-	for _, v := range siteConfig {
-		expanded.AlwaysOn = utils.Bool(v.AlwaysOn)
+	winSiteConfig := siteConfig[0]
+	expanded.AlwaysOn = utils.Bool(winSiteConfig.AlwaysOn)
 
-		if v.ApiManagementConfigId != "" {
-			expanded.APIManagementConfig = &web.APIManagementConfig{
-				ID: utils.String(v.ApiManagementConfigId),
-			}
+	if winSiteConfig.ApiManagementConfigId != "" {
+		expanded.APIManagementConfig = &web.APIManagementConfig{
+			ID: utils.String(winSiteConfig.ApiManagementConfigId),
+		}
+	}
+
+	if winSiteConfig.AppCommandLine != "" {
+		expanded.AppCommandLine = utils.String(winSiteConfig.AppCommandLine)
+	}
+
+	if len(winSiteConfig.ApplicationStack) == 1 {
+		winAppStack := winSiteConfig.ApplicationStack[0]
+		if winAppStack.NetFrameworkVersion != "" {
+			expanded.NetFrameworkVersion = utils.String(winAppStack.NetFrameworkVersion)
 		}
 
-		if v.AppCommandLine != "" {
-			expanded.AppCommandLine = utils.String(v.AppCommandLine)
+		if winAppStack.PhpVersion != "" {
+			expanded.PhpVersion = utils.String(winAppStack.PhpVersion)
 		}
 
-		if len(v.ApplicationStack) == 1 {
-			winAppStack := v.ApplicationStack[0]
-			if winAppStack.NetFrameworkVersion != "" {
-				expanded.NetFrameworkVersion = utils.String(winAppStack.NetFrameworkVersion)
-			}
-
-			if winAppStack.PhpVersion != "" {
-				expanded.PhpVersion = utils.String(winAppStack.PhpVersion)
-			}
-
-			if winAppStack.NodeVersion != "" {
-				expanded.NodeVersion = utils.String(winAppStack.NodeVersion)
-			}
-
-			if winAppStack.PythonVersion != "" {
-				expanded.PythonVersion = utils.String(winAppStack.PythonVersion)
-			}
-
-			if winAppStack.JavaVersion != "" {
-				expanded.JavaVersion = utils.String(winAppStack.JavaVersion)
-			}
-
-			if winAppStack.JavaContainer != "" {
-				expanded.JavaContainer = utils.String(winAppStack.JavaContainer)
-			}
-
-			if winAppStack.JavaContainerVersion != "" {
-				expanded.JavaContainerVersion = utils.String(winAppStack.JavaContainerVersion)
-			}
-
-			if winAppStack.DockerContainerName != "" {
-				expanded.WindowsFxVersion = utils.String(fmt.Sprintf("DOCKER|%s/%s:%s", winAppStack.DockerContainerRegistry, winAppStack.DockerContainerName, winAppStack.DockerContainerTag))
-			}
-			currentStack = winAppStack.CurrentStack
+		if winAppStack.NodeVersion != "" {
+			expanded.NodeVersion = utils.String(winAppStack.NodeVersion)
 		}
 
-		if len(v.DefaultDocuments) != 0 {
-			expanded.DefaultDocuments = &v.DefaultDocuments
+		if winAppStack.PythonVersion != "" {
+			expanded.PythonVersion = utils.String(winAppStack.PythonVersion)
 		}
 
-		expanded.HTTP20Enabled = utils.Bool(v.Http2Enabled)
-
-		if len(v.IpRestriction) != 0 {
-			ipRestrictions, err := helpers.ExpandIpRestrictions(v.IpRestriction)
-			if err != nil {
-				return nil, nil, err
-			}
-			expanded.IPSecurityRestrictions = ipRestrictions
+		if winAppStack.JavaVersion != "" {
+			expanded.JavaVersion = utils.String(winAppStack.JavaVersion)
 		}
 
-		expanded.ScmIPSecurityRestrictionsUseMain = utils.Bool(v.ScmUseMainIpRestriction)
-
-		if len(v.ScmIpRestriction) != 0 {
-			scmIpRestrictions, err := helpers.ExpandIpRestrictions(v.ScmIpRestriction)
-			if err != nil {
-				return nil, nil, err
-			}
-			expanded.ScmIPSecurityRestrictions = scmIpRestrictions
+		if winAppStack.JavaContainer != "" {
+			expanded.JavaContainer = utils.String(winAppStack.JavaContainer)
 		}
 
-		expanded.LocalMySQLEnabled = utils.Bool(v.LocalMysql)
-
-		if v.ManagedPipelineMode != "" {
-			expanded.ManagedPipelineMode = web.ManagedPipelineMode(v.ManagedPipelineMode)
+		if winAppStack.JavaContainerVersion != "" {
+			expanded.JavaContainerVersion = utils.String(winAppStack.JavaContainerVersion)
 		}
 
-		if v.RemoteDebugging {
-			expanded.RemoteDebuggingEnabled = utils.Bool(v.RemoteDebugging)
+		if winAppStack.DockerContainerName != "" {
+			expanded.WindowsFxVersion = utils.String(fmt.Sprintf("DOCKER|%s/%s:%s", winAppStack.DockerContainerRegistry, winAppStack.DockerContainerName, winAppStack.DockerContainerTag))
 		}
+		currentStack = winAppStack.CurrentStack
+	}
 
-		if v.RemoteDebuggingVersion != "" {
-			expanded.RemoteDebuggingVersion = utils.String(v.RemoteDebuggingVersion)
+	if len(winSiteConfig.DefaultDocuments) != 0 {
+		expanded.DefaultDocuments = &winSiteConfig.DefaultDocuments
+	}
+
+	expanded.HTTP20Enabled = utils.Bool(winSiteConfig.Http2Enabled)
+
+	if len(winSiteConfig.IpRestriction) != 0 {
+		ipRestrictions, err := helpers.ExpandIpRestrictions(winSiteConfig.IpRestriction)
+		if err != nil {
+			return nil, nil, err
 		}
+		expanded.IPSecurityRestrictions = ipRestrictions
+	}
 
-		if v.ScmType != "" {
-			expanded.ScmType = web.ScmType(v.ScmType)
+	expanded.ScmIPSecurityRestrictionsUseMain = utils.Bool(winSiteConfig.ScmUseMainIpRestriction)
+
+	if len(winSiteConfig.ScmIpRestriction) != 0 {
+		scmIpRestrictions, err := helpers.ExpandIpRestrictions(winSiteConfig.ScmIpRestriction)
+		if err != nil {
+			return nil, nil, err
 		}
+		expanded.ScmIPSecurityRestrictions = scmIpRestrictions
+	}
 
-		expanded.Use32BitWorkerProcess = utils.Bool(v.Use32BitWorker)
+	expanded.LocalMySQLEnabled = utils.Bool(winSiteConfig.LocalMysql)
 
-		expanded.WebSocketsEnabled = utils.Bool(v.WebSockets)
+	if winSiteConfig.ManagedPipelineMode != "" {
+		expanded.ManagedPipelineMode = web.ManagedPipelineMode(winSiteConfig.ManagedPipelineMode)
+	}
 
-		if v.FtpsState != "" {
-			expanded.FtpsState = web.FtpsState(v.FtpsState)
-		}
+	if winSiteConfig.RemoteDebugging {
+		expanded.RemoteDebuggingEnabled = utils.Bool(winSiteConfig.RemoteDebugging)
+	}
 
-		if v.HealthCheckPath != "" {
-			expanded.HealthCheckPath = utils.String(v.HealthCheckPath)
-		}
+	if winSiteConfig.RemoteDebuggingVersion != "" {
+		expanded.RemoteDebuggingVersion = utils.String(winSiteConfig.RemoteDebuggingVersion)
+	}
 
-		if v.NumberOfWorkers != 0 {
-			expanded.NumberOfWorkers = utils.Int32(int32(v.NumberOfWorkers))
-		}
+	if winSiteConfig.ScmType != "" {
+		expanded.ScmType = web.ScmType(winSiteConfig.ScmType)
+	}
 
-		//if strings.EqualFold(kind, "Windows") {
-		//	// `WindowsFxVersion` is only for Docker Image specification, which we need to collect from app_settings
-		//	expanded.WindowsFxVersion = utils.String("")
-		//}
+	expanded.Use32BitWorkerProcess = utils.Bool(winSiteConfig.Use32BitWorker)
 
-		if v.MinTlsVersion != "" {
-			expanded.MinTLSVersion = web.SupportedTLSVersions(v.MinTlsVersion)
-		}
+	expanded.WebSocketsEnabled = utils.Bool(winSiteConfig.WebSockets)
 
-		if v.ScmMinTlsVersion != "" {
-			expanded.ScmMinTLSVersion = web.SupportedTLSVersions(v.ScmMinTlsVersion)
-		}
+	if winSiteConfig.FtpsState != "" {
+		expanded.FtpsState = web.FtpsState(winSiteConfig.FtpsState)
+	}
 
-		if v.AutoSwapSlotName != "" {
-			expanded.AutoSwapSlotName = utils.String(v.AutoSwapSlotName)
-		}
+	if winSiteConfig.HealthCheckPath != "" {
+		expanded.HealthCheckPath = utils.String(winSiteConfig.HealthCheckPath)
+	}
 
-		if len(v.Cors) != 0 {
-			expanded.Cors = helpers.ExpandCorsSettings(v.Cors)
-		}
+	if winSiteConfig.NumberOfWorkers != 0 {
+		expanded.NumberOfWorkers = utils.Int32(int32(winSiteConfig.NumberOfWorkers))
+	}
+
+	if winSiteConfig.MinTlsVersion != "" {
+		expanded.MinTLSVersion = web.SupportedTLSVersions(winSiteConfig.MinTlsVersion)
+	}
+
+	if winSiteConfig.ScmMinTlsVersion != "" {
+		expanded.ScmMinTLSVersion = web.SupportedTLSVersions(winSiteConfig.ScmMinTlsVersion)
+	}
+
+	if winSiteConfig.AutoSwapSlotName != "" {
+		expanded.AutoSwapSlotName = utils.String(winSiteConfig.AutoSwapSlotName)
+	}
+
+	if len(winSiteConfig.Cors) != 0 {
+		expanded.Cors = helpers.ExpandCorsSettings(winSiteConfig.Cors)
 	}
 
 	return expanded, &currentStack, nil
 }
 
-func expandSiteConfigLinux(siteConfig []SiteConfigLinux, kind string) (*web.SiteConfig, error) {
-	// TODO - Make this Linux flavoured
+func expandSiteConfigLinux(siteConfig []SiteConfigLinux) (*web.SiteConfig, error) {
 	if len(siteConfig) == 0 {
 		return nil, nil
 	}
 	expanded := &web.SiteConfig{}
 
-	for _, v := range siteConfig {
-		expanded.AlwaysOn = utils.Bool(v.AlwaysOn)
+	linuxSiteConfig := siteConfig[0]
+	expanded.AlwaysOn = utils.Bool(linuxSiteConfig.AlwaysOn)
 
-		if v.ApiManagementConfigId != "" {
-			expanded.APIManagementConfig = &web.APIManagementConfig{
-				ID: utils.String(v.ApiManagementConfigId),
+	if linuxSiteConfig.ApiManagementConfigId != "" {
+		expanded.APIManagementConfig = &web.APIManagementConfig{
+			ID: utils.String(linuxSiteConfig.ApiManagementConfigId),
+		}
+	}
+
+	if linuxSiteConfig.AppCommandLine != "" {
+		expanded.AppCommandLine = utils.String(linuxSiteConfig.AppCommandLine)
+	}
+
+	if len(linuxSiteConfig.ApplicationStack) == 1 {
+		linuxAppStack := linuxSiteConfig.ApplicationStack[0]
+		if linuxAppStack.NetFrameworkVersion != "" {
+			expanded.LinuxFxVersion = utils.String(fmt.Sprintf("DOTNETCORE|%s", linuxAppStack.NetFrameworkVersion))
+		}
+
+		if linuxAppStack.PhpVersion != "" {
+			expanded.LinuxFxVersion = utils.String(fmt.Sprintf("PHP|%s", linuxAppStack.PhpVersion))
+		}
+
+		if linuxAppStack.NodeVersion != "" {
+			expanded.LinuxFxVersion = utils.String(fmt.Sprintf("NODE|%s", linuxAppStack.NodeVersion))
+		}
+
+		if linuxAppStack.PythonVersion != "" {
+			expanded.LinuxFxVersion = utils.String(fmt.Sprintf("PYTHON|%s", linuxAppStack.PythonVersion))
+		}
+
+		if linuxAppStack.JavaServer != "" {
+			// (@jackofallops) - Java has some special cases for Java SE when using specific versions of the runtime, resulting in this string
+			// being formatted in the form: `JAVA|u242` instead of the standard pattern of `JAVA|u242-java8` for example. This applies to jre8 and java11.
+			if linuxAppStack.JavaServer == "JAVA" && linuxAppStack.JavaServerVersion == "" {
+				expanded.LinuxFxVersion = utils.String(fmt.Sprintf("%s|%s", linuxAppStack.JavaServer, linuxAppStack.JavaVersion))
+			} else {
+				expanded.LinuxFxVersion = utils.String(fmt.Sprintf("%s|%s-%s", linuxAppStack.JavaServer, linuxAppStack.JavaServerVersion, linuxAppStack.JavaVersion))
 			}
 		}
 
-		if v.AppCommandLine != "" {
-			expanded.AppCommandLine = utils.String(v.AppCommandLine)
+		if linuxAppStack.DockerImage != "" {
+			expanded.LinuxFxVersion = utils.String(fmt.Sprintf("DOCKER|%s:%s", linuxAppStack.DockerImage, linuxAppStack.DockerImageTag))
 		}
+	}
 
-		if len(v.ApplicationStack) == 1 {
-			linuxAppStack := v.ApplicationStack[0]
-			if linuxAppStack.NetFrameworkVersion != "" {
-				//expanded.NetFrameworkVersion = utils.String(fmt.Sprintf("v%s", linuxAppStack.NetFrameworkVersion))
-				expanded.LinuxFxVersion = utils.String(fmt.Sprintf("DOTNETCORE|%s", linuxAppStack.NetFrameworkVersion))
-			}
+	if len(linuxSiteConfig.DefaultDocuments) != 0 {
+		expanded.DefaultDocuments = &linuxSiteConfig.DefaultDocuments
+	}
 
-			if linuxAppStack.PhpVersion != "" {
-				expanded.LinuxFxVersion = utils.String(fmt.Sprintf("PHP|%s", linuxAppStack.PhpVersion))
-			}
+	expanded.HTTP20Enabled = utils.Bool(linuxSiteConfig.Http2Enabled)
 
-			if linuxAppStack.NodeVersion != "" {
-				expanded.LinuxFxVersion = utils.String(fmt.Sprintf("NODE|%s", linuxAppStack.NodeVersion))
-			}
-
-			if linuxAppStack.PythonVersion != "" {
-				expanded.LinuxFxVersion = utils.String(fmt.Sprintf("PYTHON|%s", linuxAppStack.PythonVersion))
-			}
-
-			if linuxAppStack.JavaServer != "" {
-				// (@jackofallops) - Java has some special cases for Java SE when using specific versions of the runtime, resulting in this string
-				// being formatted in the form: `JAVA|u242` instead of the standard pattern of `JAVA|u242-java8` for example. This applies to jre8 and java11.
-				if linuxAppStack.JavaServer == "JAVA" && linuxAppStack.JavaServerVersion == "" {
-					expanded.LinuxFxVersion = utils.String(fmt.Sprintf("%s|%s", linuxAppStack.JavaServer, linuxAppStack.JavaVersion))
-				} else {
-					expanded.LinuxFxVersion = utils.String(fmt.Sprintf("%s|%s-%s", linuxAppStack.JavaServer, linuxAppStack.JavaServerVersion, linuxAppStack.JavaVersion))
-				}
-			}
-
-			if linuxAppStack.DockerImage != "" {
-				expanded.LinuxFxVersion = utils.String(fmt.Sprintf("DOCKER|%s:%s", linuxAppStack.DockerImage, linuxAppStack.DockerImageTag))
-			}
+	if len(linuxSiteConfig.IpRestriction) != 0 {
+		ipRestrictions, err := helpers.ExpandIpRestrictions(linuxSiteConfig.IpRestriction)
+		if err != nil {
+			return nil, err
 		}
+		expanded.IPSecurityRestrictions = ipRestrictions
+	}
 
-		if len(v.DefaultDocuments) != 0 {
-			expanded.DefaultDocuments = &v.DefaultDocuments
+	expanded.ScmIPSecurityRestrictionsUseMain = utils.Bool(linuxSiteConfig.ScmUseMainIpRestriction)
+
+	if len(linuxSiteConfig.ScmIpRestriction) != 0 {
+		scmIpRestrictions, err := helpers.ExpandIpRestrictions(linuxSiteConfig.ScmIpRestriction)
+		if err != nil {
+			return nil, err
 		}
+		expanded.ScmIPSecurityRestrictions = scmIpRestrictions
+	}
 
-		expanded.HTTP20Enabled = utils.Bool(v.Http2Enabled)
+	expanded.LocalMySQLEnabled = utils.Bool(linuxSiteConfig.LocalMysql)
 
-		if len(v.IpRestriction) != 0 {
-			ipRestrictions, err := helpers.ExpandIpRestrictions(v.IpRestriction)
-			if err != nil {
-				return nil, err
-			}
-			expanded.IPSecurityRestrictions = ipRestrictions
-		}
+	if linuxSiteConfig.ManagedPipelineMode != "" {
+		expanded.ManagedPipelineMode = web.ManagedPipelineMode(linuxSiteConfig.ManagedPipelineMode)
+	}
 
-		expanded.ScmIPSecurityRestrictionsUseMain = utils.Bool(v.ScmUseMainIpRestriction)
+	if linuxSiteConfig.RemoteDebugging {
+		expanded.RemoteDebuggingEnabled = utils.Bool(linuxSiteConfig.RemoteDebugging)
+	}
 
-		if len(v.ScmIpRestriction) != 0 {
-			scmIpRestrictions, err := helpers.ExpandIpRestrictions(v.ScmIpRestriction)
-			if err != nil {
-				return nil, err
-			}
-			expanded.ScmIPSecurityRestrictions = scmIpRestrictions
-		}
+	if linuxSiteConfig.RemoteDebuggingVersion != "" {
+		expanded.RemoteDebuggingVersion = utils.String(linuxSiteConfig.RemoteDebuggingVersion)
+	}
 
-		expanded.LocalMySQLEnabled = utils.Bool(v.LocalMysql)
+	if linuxSiteConfig.ScmType != "" {
+		expanded.ScmType = web.ScmType(linuxSiteConfig.ScmType)
+	}
 
-		if v.ManagedPipelineMode != "" {
-			expanded.ManagedPipelineMode = web.ManagedPipelineMode(v.ManagedPipelineMode)
-		}
+	expanded.Use32BitWorkerProcess = utils.Bool(linuxSiteConfig.Use32BitWorker)
 
-		if v.RemoteDebugging {
-			expanded.RemoteDebuggingEnabled = utils.Bool(v.RemoteDebugging)
-		}
+	expanded.WebSocketsEnabled = utils.Bool(linuxSiteConfig.WebSockets)
 
-		if v.RemoteDebuggingVersion != "" {
-			expanded.RemoteDebuggingVersion = utils.String(v.RemoteDebuggingVersion)
-		}
+	if linuxSiteConfig.FtpsState != "" {
+		expanded.FtpsState = web.FtpsState(linuxSiteConfig.FtpsState)
+	}
 
-		if v.ScmType != "" {
-			expanded.ScmType = web.ScmType(v.ScmType)
-		}
+	if linuxSiteConfig.HealthCheckPath != "" {
+		expanded.HealthCheckPath = utils.String(linuxSiteConfig.HealthCheckPath)
+	}
 
-		expanded.Use32BitWorkerProcess = utils.Bool(v.Use32BitWorker)
+	if linuxSiteConfig.NumberOfWorkers != 0 {
+		expanded.NumberOfWorkers = utils.Int32(int32(linuxSiteConfig.NumberOfWorkers))
+	}
 
-		expanded.WebSocketsEnabled = utils.Bool(v.WebSockets)
+	if linuxSiteConfig.MinTlsVersion != "" {
+		expanded.MinTLSVersion = web.SupportedTLSVersions(linuxSiteConfig.MinTlsVersion)
+	}
 
-		if v.FtpsState != "" {
-			expanded.FtpsState = web.FtpsState(v.FtpsState)
-		}
+	if linuxSiteConfig.ScmMinTlsVersion != "" {
+		expanded.ScmMinTLSVersion = web.SupportedTLSVersions(linuxSiteConfig.ScmMinTlsVersion)
+	}
 
-		if v.HealthCheckPath != "" {
-			expanded.HealthCheckPath = utils.String(v.HealthCheckPath)
-		}
+	if linuxSiteConfig.AutoSwapSlotName != "" {
+		expanded.AutoSwapSlotName = utils.String(linuxSiteConfig.AutoSwapSlotName)
+	}
 
-		if v.NumberOfWorkers != 0 {
-			expanded.NumberOfWorkers = utils.Int32(int32(v.NumberOfWorkers))
-		}
-
-		if v.MinTlsVersion != "" {
-			expanded.MinTLSVersion = web.SupportedTLSVersions(v.MinTlsVersion)
-		}
-
-		if v.ScmMinTlsVersion != "" {
-			expanded.ScmMinTLSVersion = web.SupportedTLSVersions(v.ScmMinTlsVersion)
-		}
-
-		if v.AutoSwapSlotName != "" {
-			expanded.AutoSwapSlotName = utils.String(v.AutoSwapSlotName)
-		}
-
-		if len(v.Cors) != 0 {
-			expanded.Cors = helpers.ExpandCorsSettings(v.Cors)
-		}
+	if len(linuxSiteConfig.Cors) != 0 {
+		expanded.Cors = helpers.ExpandCorsSettings(linuxSiteConfig.Cors)
 	}
 
 	return expanded, nil
@@ -1251,16 +1245,12 @@ func expandLogsConfig(config []LogsConfig) *web.SiteLogsConfig {
 		}
 	}
 
-	if logsConfig.DetailedErrorMessages {
-		siteLogsConfig.DetailedErrorMessages = &web.EnabledConfig{
-			Enabled: utils.Bool(logsConfig.DetailedErrorMessages),
-		}
+	siteLogsConfig.DetailedErrorMessages = &web.EnabledConfig{
+		Enabled: utils.Bool(logsConfig.DetailedErrorMessages),
 	}
 
-	if logsConfig.FailedRequestTracing {
-		siteLogsConfig.FailedRequestsTracing = &web.EnabledConfig{
-			Enabled: utils.Bool(logsConfig.FailedRequestTracing),
-		}
+	siteLogsConfig.FailedRequestsTracing = &web.EnabledConfig{
+		Enabled: utils.Bool(logsConfig.FailedRequestTracing),
 	}
 
 	return siteLogsConfig
@@ -1443,11 +1433,11 @@ func flattenLogsConfig(logsConfig web.SiteLogsConfig) []LogsConfig {
 		logs.HttpLogs = []HttpLog{httpLog}
 	}
 
-	if props.DetailedErrorMessages != nil && props.DetailedErrorMessages.Enabled != nil {
+	if props.DetailedErrorMessages != nil {
 		logs.DetailedErrorMessages = *props.DetailedErrorMessages.Enabled
 	}
 
-	if props.FailedRequestsTracing != nil && props.FailedRequestsTracing.Enabled != nil {
+	if props.FailedRequestsTracing != nil {
 		logs.FailedRequestTracing = *props.FailedRequestsTracing.Enabled
 	}
 
@@ -1482,6 +1472,8 @@ func flattenSiteConfigWindows(appSiteConfig *web.SiteConfig) []SiteConfigWindows
 	if appSiteConfig.DefaultDocuments != nil {
 		siteConfig.DefaultDocuments = *appSiteConfig.DefaultDocuments
 	}
+
+	siteConfig.DetailedErrorLogging = *appSiteConfig.DetailedErrorLoggingEnabled
 
 	if appSiteConfig.HTTP20Enabled != nil {
 		siteConfig.Http2Enabled = *appSiteConfig.HTTP20Enabled
@@ -1622,6 +1614,8 @@ func flattenSiteConfigLinux(appSiteConfig *web.SiteConfig) []SiteConfigLinux {
 		siteConfig.DefaultDocuments = *appSiteConfig.DefaultDocuments
 	}
 
+	siteConfig.DetailedErrorLogging = *appSiteConfig.DetailedErrorLoggingEnabled
+
 	if appSiteConfig.HTTP20Enabled != nil {
 		siteConfig.Http2Enabled = *appSiteConfig.HTTP20Enabled
 	}
@@ -1630,21 +1624,15 @@ func flattenSiteConfigLinux(appSiteConfig *web.SiteConfig) []SiteConfigLinux {
 		siteConfig.IpRestriction = helpers.FlattenIpRestrictions(appSiteConfig.IPSecurityRestrictions)
 	}
 
-	if appSiteConfig.ScmIPSecurityRestrictionsUseMain != nil {
-		siteConfig.ScmUseMainIpRestriction = *appSiteConfig.ScmIPSecurityRestrictionsUseMain
-	}
+	siteConfig.ScmUseMainIpRestriction = *appSiteConfig.ScmIPSecurityRestrictionsUseMain
 
 	if appSiteConfig.ScmIPSecurityRestrictions != nil {
 		siteConfig.ScmIpRestriction = helpers.FlattenIpRestrictions(appSiteConfig.ScmIPSecurityRestrictions)
 	}
 
-	if appSiteConfig.LocalMySQLEnabled != nil {
-		siteConfig.LocalMysql = *appSiteConfig.LocalMySQLEnabled
-	}
+	siteConfig.LocalMysql = *appSiteConfig.LocalMySQLEnabled
 
-	if appSiteConfig.RemoteDebuggingEnabled != nil {
-		siteConfig.RemoteDebugging = *appSiteConfig.RemoteDebuggingEnabled
-	}
+	siteConfig.RemoteDebugging = *appSiteConfig.RemoteDebuggingEnabled
 
 	if appSiteConfig.RemoteDebuggingVersion != nil {
 		siteConfig.RemoteDebuggingVersion = *appSiteConfig.RemoteDebuggingVersion
@@ -1654,9 +1642,7 @@ func flattenSiteConfigLinux(appSiteConfig *web.SiteConfig) []SiteConfigLinux {
 		siteConfig.Use32BitWorker = *appSiteConfig.Use32BitWorkerProcess
 	}
 
-	if appSiteConfig.WebSocketsEnabled != nil {
-		siteConfig.WebSockets = *appSiteConfig.WebSocketsEnabled
-	}
+	siteConfig.WebSockets = *appSiteConfig.WebSocketsEnabled
 
 	if appSiteConfig.HealthCheckPath != nil {
 		siteConfig.HealthCheckPath = *appSiteConfig.HealthCheckPath
