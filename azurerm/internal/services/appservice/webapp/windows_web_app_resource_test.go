@@ -14,18 +14,15 @@ import (
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/utils"
 )
 
-type WebAppResource struct{}
+type WindowsWebAppResource struct{}
 
-const osTypeWindows = "Windows"
-const osTypeLinux = "Linux"
-
-func TestAccWebApp_basicWindows(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_basic(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.basic(data, osTypeWindows),
+			Config: r.basic(data),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -34,29 +31,13 @@ func TestAccWebApp_basicWindows(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_basicLinux(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_requiresImport(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.basic(data, osTypeLinux),
-			Check: resource.ComposeTestCheckFunc(
-				check.That(data.ResourceName).ExistsInAzure(r),
-				check.That(data.ResourceName).Key("kind").HasValue("app,linux"),
-			),
-		},
-		data.ImportStep(),
-	})
-}
-
-func TestAccWebApp_requiresImport(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
-
-	data.ResourceTest(t, r, []resource.TestStep{
-		{
-			Config: r.basic(data, osTypeWindows),
+			Config: r.basic(data),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -65,13 +46,13 @@ func TestAccWebApp_requiresImport(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_completeWindows(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_complete(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.completeWindows(data),
+			Config: r.complete(data),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -80,13 +61,13 @@ func TestAccWebApp_completeWindows(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_completeUpdated(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_completeUpdated(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.completeWindows(data),
+			Config: r.complete(data),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -102,27 +83,27 @@ func TestAccWebApp_completeUpdated(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_windowsLogsUpdate(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_logsUpdate(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.basic(data, osTypeWindows),
+			Config: r.basic(data),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
 		},
 		data.ImportStep(),
 		{
-			Config: r.logsEnabled(data, osTypeWindows),
+			Config: r.logsEnabled(data),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
 		},
 		data.ImportStep(),
 		{
-			Config: r.basic(data, osTypeWindows),
+			Config: r.basic(data),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -131,13 +112,13 @@ func TestAccWebApp_windowsLogsUpdate(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_windowsWithDotNet(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_withDotNet(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.windowsDotNet(data, "v4.0"),
+			Config: r.dotNet(data, "v4.0"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -146,13 +127,13 @@ func TestAccWebApp_windowsWithDotNet(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_windowsWithPhp(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_withPhp(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.windowsPhp(data, "7.3"),
+			Config: r.php(data, "7.3"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -161,27 +142,27 @@ func TestAccWebApp_windowsWithPhp(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_windowsWithPhpUpdate(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_withPhpUpdate(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.windowsPhp(data, "7.3"),
+			Config: r.php(data, "7.3"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
 		},
 		data.ImportStep(),
 		{
-			Config: r.windowsPhp(data, "7.4"),
+			Config: r.php(data, "7.4"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
 		},
 		data.ImportStep(),
 		{
-			Config: r.windowsPhp(data, "5.6"),
+			Config: r.php(data, "5.6"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -190,13 +171,13 @@ func TestAccWebApp_windowsWithPhpUpdate(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_windowsWithPython(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_withPython27(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.windowsPython(data, "2.7"),
+			Config: r.python(data, "2.7"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -205,43 +186,13 @@ func TestAccWebApp_windowsWithPython(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_windowsWithPythonUpdate(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_withPython34(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.basic(data, osTypeWindows),
-			Check: resource.ComposeTestCheckFunc(
-				check.That(data.ResourceName).ExistsInAzure(r),
-			),
-		},
-		data.ImportStep(),
-		{
-			Config: r.windowsPython(data, "2.7"),
-			Check: resource.ComposeTestCheckFunc(
-				check.That(data.ResourceName).ExistsInAzure(r),
-			),
-		},
-		data.ImportStep(),
-		{
-			Config: r.basic(data, osTypeWindows),
-			Check: resource.ComposeTestCheckFunc(
-				check.That(data.ResourceName).ExistsInAzure(r),
-				check.That(data.ResourceName).Key("site_config.0.windows_application_stack.0.python_version").HasValue(""),
-			),
-		},
-		data.ImportStep(),
-	})
-}
-
-func TestAccWebApp_windowsWithJava7Java(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
-
-	data.ResourceTest(t, r, []resource.TestStep{
-		{
-			Config: r.windowsJava(data, "1.7", "JAVA", "9.3"),
+			Config: r.python(data, "3.4.0"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -250,13 +201,43 @@ func TestAccWebApp_windowsWithJava7Java(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_windowsWithJava8Java(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_withPythonUpdate(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.windowsJava(data, "1.8", "JAVA", "9.3"),
+			Config: r.basic(data),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+		{
+			Config: r.python(data, "2.7"),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+		{
+			Config: r.basic(data),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("site_config.0.application_stack.0.python_version").HasValue(""),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccWindowsWebApp_withJava7Java93(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
+
+	data.ResourceTest(t, r, []resource.TestStep{
+		{
+			Config: r.java(data, "1.7", "JAVA", "9.3"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -265,13 +246,13 @@ func TestAccWebApp_windowsWithJava8Java(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_windowsWithJava11Java(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_withJava7JavaSE(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.windowsJava(data, "11", "JAVA", "9.3"),
+			Config: r.java(data, "1.7", "JAVA", "SE"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -280,13 +261,13 @@ func TestAccWebApp_windowsWithJava11Java(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_windowsWithJava7Jetty(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_withJava8Java(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.windowsJava(data, "1.7", "JETTY", "9.3"),
+			Config: r.java(data, "1.8", "JAVA", "9.3"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -295,13 +276,43 @@ func TestAccWebApp_windowsWithJava7Jetty(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_basicDockerContainer(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_withJava11Java(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.windowsDocker(data),
+			Config: r.java(data, "11", "JAVA", "9.3"),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccWindowsWebApp_withJava7Jetty(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
+
+	data.ResourceTest(t, r, []resource.TestStep{
+		{
+			Config: r.java(data, "1.7", "JETTY", "9.3"),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccWindowsWebApp_basicDockerContainer(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
+
+	data.ResourceTest(t, r, []resource.TestStep{
+		{
+			Config: r.docker(data),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 				check.That(data.ResourceName).Key("site_config.0.windows_fx_version").HasValue("DOCKER|mcr.microsoft.com/azure-app-service/samples/aspnethelloworld:latest"),
@@ -313,13 +324,13 @@ func TestAccWebApp_basicDockerContainer(t *testing.T) {
 
 // TODO: More Java matrix tests...
 
-func TestAccWebApp_windowsWithNode(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_withNode101(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.windowsNode(data, "10.1"),
+			Config: r.node(data, "10.1"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -328,13 +339,13 @@ func TestAccWebApp_windowsWithNode(t *testing.T) {
 	})
 }
 
-func TestAccWebApp_windowsWithMultiStack(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_web_app", "test")
-	r := WebAppResource{}
+func TestAccWindowsWebApp_withNode12lts(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
 
 	data.ResourceTest(t, r, []resource.TestStep{
 		{
-			Config: r.windowsMultiStack(data),
+			Config: r.node(data, "12-LTS"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -343,7 +354,37 @@ func TestAccWebApp_windowsWithMultiStack(t *testing.T) {
 	})
 }
 
-func (r WebAppResource) Exists(ctx context.Context, client *clients.Client, state *pluginsdk.InstanceState) (*bool, error) {
+func TestAccWindowsWebApp_withNode14lts(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
+
+	data.ResourceTest(t, r, []resource.TestStep{
+		{
+			Config: r.node(data, "14-LTS"),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccWindowsWebApp_withMultiStack(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
+
+	data.ResourceTest(t, r, []resource.TestStep{
+		{
+			Config: r.multiStack(data),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func (r WindowsWebAppResource) Exists(ctx context.Context, client *clients.Client, state *pluginsdk.InstanceState) (*bool, error) {
 	id, err := parse.WebAppID(state.ID)
 	if err != nil {
 		return nil, err
@@ -354,7 +395,7 @@ func (r WebAppResource) Exists(ctx context.Context, client *clients.Client, stat
 		if utils.ResponseWasNotFound(resp.Response) {
 			return utils.Bool(false), nil
 		}
-		return nil, fmt.Errorf("retrieving Web App %s: %+v", id, err)
+		return nil, fmt.Errorf("retrieving Windows Web App %s: %+v", id, err)
 	}
 	if utils.ResponseWasNotFound(resp.Response) {
 		return utils.Bool(false), nil
@@ -362,7 +403,7 @@ func (r WebAppResource) Exists(ctx context.Context, client *clients.Client, stat
 	return utils.Bool(true), nil
 }
 
-func (r WebAppResource) basic(data acceptance.TestData, osType string) string {
+func (r WindowsWebAppResource) basic(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -370,16 +411,16 @@ provider "azurerm" {
 
 %s
 
-resource "azurerm_web_app" "test" {
+resource "azurerm_windows_web_app" "test" {
   name                = "acctestAS-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
 }
-`, r.baseTemplate(data, osType), data.RandomInteger)
+`, r.baseTemplate(data), data.RandomInteger)
 }
 
-func (r WebAppResource) completeWindows(data acceptance.TestData) string {
+func (r WindowsWebAppResource) complete(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -387,7 +428,7 @@ provider "azurerm" {
 
 %s
 
-resource "azurerm_web_app" "test" {
+resource "azurerm_windows_web_app" "test" {
   name                = "acctestAS-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
@@ -523,10 +564,10 @@ resource "azurerm_web_app" "test" {
     foo = "bar"
   }
 }
-`, r.templateWithStorageAccount(data, osTypeWindows), data.RandomInteger, data.Client().TenantID)
+`, r.templateWithStorageAccount(data), data.RandomInteger, data.Client().TenantID)
 }
 
-func (r WebAppResource) completeUpdate(data acceptance.TestData) string {
+func (r WindowsWebAppResource) completeUpdate(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -534,7 +575,7 @@ provider "azurerm" {
 
 %s
 
-resource "azurerm_web_app" "test" {
+resource "azurerm_windows_web_app" "test" {
   name                = "acctestAS-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
@@ -666,23 +707,23 @@ resource "azurerm_web_app" "test" {
     foo = "bar"
   }
 }
-`, r.templateWithStorageAccount(data, "Windows"), data.RandomInteger, data.Client().TenantID)
+`, r.templateWithStorageAccount(data), data.RandomInteger, data.Client().TenantID)
 }
 
-func (r WebAppResource) requiresImport(data acceptance.TestData) string {
+func (r WindowsWebAppResource) requiresImport(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 %s
 
-resource "azurerm_web_app" "import" {
-  name                = azurerm_web_app.test.name
-  location            = azurerm_web_app.test.location
-  resource_group_name = azurerm_web_app.test.resource_group_name
-  service_plan_id     = azurerm_web_app.test.service_plan_id
+resource "azurerm_windows_web_app" "import" {
+  name                = azurerm_windows_web_app.test.name
+  location            = azurerm_windows_web_app.test.location
+  resource_group_name = azurerm_windows_web_app.test.resource_group_name
+  service_plan_id     = azurerm_windows_web_app.test.service_plan_id
 }
-`, r.basic(data, osTypeWindows))
+`, r.basic(data))
 }
 
-func (r WebAppResource) windowsDotNet(data acceptance.TestData, dotNetVersion string) string {
+func (r WindowsWebAppResource) dotNet(data acceptance.TestData, dotNetVersion string) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -690,23 +731,23 @@ provider "azurerm" {
 
 %s
 
-resource "azurerm_web_app" "test" {
+resource "azurerm_windows_web_app" "test" {
   name                = "acctestWA-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
 
   site_config {
-    windows_application_stack {
+    application_stack {
       dotnet_framework_version = "%s"
     }
   }
 }
 
-`, r.baseTemplate(data, osTypeWindows), data.RandomInteger, dotNetVersion)
+`, r.baseTemplate(data), data.RandomInteger, dotNetVersion)
 }
 
-func (r WebAppResource) windowsDocker(data acceptance.TestData) string {
+func (r WindowsWebAppResource) docker(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -714,20 +755,21 @@ provider "azurerm" {
 
 %s
 
-resource "azurerm_web_app" "test" {
+resource "azurerm_windows_web_app" "test" {
   name                = "acctestWA-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
 
   app_settings = {
-    "DOCKER_REGISTRY_SERVER_URL"      = "https://mcr.microsoft.com"
-    "DOCKER_REGISTRY_SERVER_USERNAME" = ""
-    "DOCKER_REGISTRY_SERVER_PASSWORD" = ""
+    "DOCKER_REGISTRY_SERVER_URL"          = "https://mcr.microsoft.com"
+    "DOCKER_REGISTRY_SERVER_USERNAME"     = ""
+    "DOCKER_REGISTRY_SERVER_PASSWORD"     = ""
+    "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
   }
 
   site_config {
-    windows_application_stack {
+    application_stack {
       docker_container_registry = "%s"
       docker_container_name     = "%s"
       docker_container_tag      = "%s"
@@ -735,10 +777,10 @@ resource "azurerm_web_app" "test" {
   }
 }
 
-`, r.baseTemplate(data, osTypeWindows), data.RandomInteger, "mcr.microsoft.com", "azure-app-service/samples/aspnethelloworld", "latest")
+`, r.premiumPlanTemplate(data), data.RandomInteger, "mcr.microsoft.com", "azure-app-service/samples/aspnethelloworld", "latest")
 }
 
-func (r WebAppResource) windowsNode(data acceptance.TestData, nodeVersion string) string {
+func (r WindowsWebAppResource) node(data acceptance.TestData, nodeVersion string) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -746,23 +788,24 @@ provider "azurerm" {
 
 %s
 
-resource "azurerm_web_app" "test" {
+resource "azurerm_windows_web_app" "test" {
   name                = "acctestWA-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
 
   site_config {
-    windows_application_stack {
-      node_version = "%s"
+    application_stack {
+      node_version  = "%s"
+      current_stack = "node"
     }
   }
 }
 
-`, r.baseTemplate(data, osTypeWindows), data.RandomInteger, nodeVersion)
+`, r.baseTemplate(data), data.RandomInteger, nodeVersion)
 }
 
-func (r WebAppResource) windowsPhp(data acceptance.TestData, phpVersion string) string {
+func (r WindowsWebAppResource) php(data acceptance.TestData, phpVersion string) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -770,23 +813,24 @@ provider "azurerm" {
 
 %s
 
-resource "azurerm_web_app" "test" {
+resource "azurerm_windows_web_app" "test" {
   name                = "acctestWA-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
 
   site_config {
-    windows_application_stack {
-      php_version = "%s"
+    application_stack {
+      php_version   = "%s"
+      current_stack = "php"
     }
   }
 }
 
-`, r.baseTemplate(data, osTypeWindows), data.RandomInteger, phpVersion)
+`, r.baseTemplate(data), data.RandomInteger, phpVersion)
 }
 
-func (r WebAppResource) windowsPython(data acceptance.TestData, pythonVersion string) string {
+func (r WindowsWebAppResource) python(data acceptance.TestData, pythonVersion string) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -794,23 +838,24 @@ provider "azurerm" {
 
 %s
 
-resource "azurerm_web_app" "test" {
+resource "azurerm_windows_web_app" "test" {
   name                = "acctestWA-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
 
   site_config {
-    windows_application_stack {
+    application_stack {
       python_version = "%s"
+      current_stack  = "python"
     }
   }
 }
 
-`, r.baseTemplate(data, osTypeWindows), data.RandomInteger, pythonVersion)
+`, r.baseTemplate(data), data.RandomInteger, pythonVersion)
 }
 
-func (r WebAppResource) windowsJava(data acceptance.TestData, javaVersion string, javaContainer string, javaContainerVersion string) string {
+func (r WindowsWebAppResource) java(data acceptance.TestData, javaVersion string, javaContainer string, javaContainerVersion string) string {
 	javaContainerStr := ""
 	if javaContainer != "" {
 		javaContainerStr = fmt.Sprintf("java_container = %q", javaContainer)
@@ -827,25 +872,26 @@ provider "azurerm" {
 
 %s
 
-resource "azurerm_web_app" "test" {
+resource "azurerm_windows_web_app" "test" {
   name                = "acctestWA-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
 
   site_config {
-    windows_application_stack {
-      java_version = "%s"
+    application_stack {
+      current_stack = "java"
+      java_version  = "%s"
       %s
       %s
     }
   }
 }
 
-`, r.baseTemplate(data, osTypeWindows), data.RandomInteger, javaVersion, javaContainerStr, javaContainerVersionStr)
+`, r.baseTemplate(data), data.RandomInteger, javaVersion, javaContainerStr, javaContainerVersionStr)
 }
 
-func (r WebAppResource) windowsMultiStack(data acceptance.TestData) string {
+func (r WindowsWebAppResource) multiStack(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -853,14 +899,14 @@ provider "azurerm" {
 
 %s
 
-resource "azurerm_web_app" "test" {
+resource "azurerm_windows_web_app" "test" {
   name                = "acctestWA-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
 
   site_config {
-    windows_application_stack {
+    application_stack {
       dotnet_framework_version = "%s"
       php_version              = "%s"
       python_version           = "%s"
@@ -871,10 +917,10 @@ resource "azurerm_web_app" "test" {
   }
 }
 
-`, r.baseTemplate(data, osTypeWindows), data.RandomInteger, "v4.0", "7.4", "2.7", "1.8", "TOMCAT", "9.0")
+`, r.baseTemplate(data), data.RandomInteger, "v4.0", "7.4", "2.7", "1.8", "TOMCAT", "9.0")
 }
 
-func (r WebAppResource) logsEnabled(data acceptance.TestData, osType string) string {
+func (r WindowsWebAppResource) logsEnabled(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -882,7 +928,7 @@ provider "azurerm" {
 
 %s
 
-resource "azurerm_web_app" "test" {
+resource "azurerm_windows_web_app" "test" {
   name                = "acctestAS-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
@@ -907,12 +953,12 @@ resource "azurerm_web_app" "test" {
   }
 }
 
-`, r.templateWithStorageAccount(data, osType), data.RandomInteger)
+`, r.templateWithStorageAccount(data), data.RandomInteger)
 }
 
 // Templates
 
-func (WebAppResource) baseTemplate(data acceptance.TestData, osType string) string {
+func (WindowsWebAppResource) baseTemplate(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 
 resource "azurerm_resource_group" "test" {
@@ -924,18 +970,40 @@ resource "azurerm_app_service_plan" "test" {
   name                = "acctestASP-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
-  kind                = "%s"
-  reserved            = %t
+  kind                = "Windows"
 
   sku {
     tier = "Standard"
     size = "S1"
   }
 }
-`, data.RandomInteger, data.Locations.Primary, data.RandomInteger, osType, osType == osTypeLinux)
+`, data.RandomInteger, data.Locations.Primary, data.RandomInteger)
 }
 
-func (r WebAppResource) templateWithStorageAccount(data acceptance.TestData, osType string) string {
+func (WindowsWebAppResource) premiumPlanTemplate(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+
+resource "azurerm_resource_group" "test" {
+  name     = "acctestRG-%d"
+  location = "%s"
+}
+
+resource "azurerm_app_service_plan" "test" {
+  name                = "acctestASP-%d"
+  location            = azurerm_resource_group.test.location
+  resource_group_name = azurerm_resource_group.test.name
+  kind                = "Windows"
+  is_xenon            = true // TODO - this is deprecated, use is_hyperv instead for new resource
+
+  sku {
+    tier = "PremiumV3"
+    size = "P1v3"
+  }
+}
+`, data.RandomInteger, data.Locations.Primary, data.RandomInteger)
+}
+
+func (r WindowsWebAppResource) templateWithStorageAccount(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 
 %s
@@ -996,5 +1064,5 @@ data "azurerm_storage_account_sas" "test" {
     process = false
   }
 }
-`, r.baseTemplate(data, osType), data.RandomInteger, data.RandomString)
+`, r.baseTemplate(data), data.RandomInteger, data.RandomString)
 }

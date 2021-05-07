@@ -29,7 +29,8 @@ func (r Registration) DataSources() []sdk.DataSource {
 func (r Registration) Resources() []sdk.Resource {
 	if features.ThreePointOh() {
 		return []sdk.Resource{
-			webapp.AppResource{},
+			webapp.WindowsWebAppResource{},
+			webapp.LinuxWebAppResource{},
 		}
 	}
 	return []sdk.Resource{}

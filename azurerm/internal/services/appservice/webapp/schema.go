@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/terraform-providers/terraform-provider-azuread/azuread/helpers/validate"
+
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/appservice/helpers"
 
 	"github.com/Azure/azure-sdk-for-go/services/web/mgmt/2020-12-01/web"
@@ -16,9 +18,10 @@ import (
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/utils"
 )
 
-// TODO - Stack handling
+const osTypeWindows = "Windows"
+const osTypeLinux = "Linux"
 
-type SiteConfig struct {
+type SiteConfigWindows struct {
 	AlwaysOn              bool     `tfschema:"always_on"`
 	ApiManagementConfigId string   `tfschema:"api_management_config_id"`
 	AppCommandLine        string   `tfschema:"app_command_line"`
@@ -29,23 +32,23 @@ type SiteConfig struct {
 	ScmUseMainIpRestriction bool                    `tfschema:"scm_use_main_ip_restriction"`
 	ScmIpRestriction        []helpers.IpRestriction `tfschema:"scm_ip_restriction"`
 	// LoadBalancing string `tfschema:"load_balancing_mode"` // TODO - New field to support, defaults to `LeastRequests`
-	LocalMysql              bool                      `tfschema:"local_mysql"`
-	ManagedPipelineMode     string                    `tfschema:"managed_pipeline_mode"`
-	RemoteDebugging         bool                      `tfschema:"remote_debugging"`
-	RemoteDebuggingVersion  string                    `tfschema:"remote_debugging_version"`
-	ScmType                 string                    `tfschema:"scm_type"`
-	Use32BitWorker          bool                      `tfschema:"use_32_bit_worker"`
-	WebSockets              bool                      `tfschema:"websockets"`
-	FtpsState               string                    `tfschema:"ftps_state"`
-	HealthCheckPath         string                    `tfschema:"health_check_path"`
-	NumberOfWorkers         int                       `tfschema:"number_of_workers"`
-	WindowsApplicationStack []WindowsApplicationStack `tfschema:"windows_application_stack"`
-	MinTlsVersion           string                    `tfschema:"minimum_tls_version"`
-	ScmMinTlsVersion        string                    `tfschema:"scm_minimum_tls_version"`
-	AutoSwapSlotName        string                    `tfschema:"auto_swap_slot_name"`
-	Cors                    []helpers.CorsSetting     `tfschema:"cors"`
-	LinuxFxVersion          string                    `tfschema:"linux_fx_version"`
-	WindowsFxVersion        string                    `tfschema:"windows_fx_version"`
+	LocalMysql             bool                      `tfschema:"local_mysql"`
+	ManagedPipelineMode    string                    `tfschema:"managed_pipeline_mode"`
+	RemoteDebugging        bool                      `tfschema:"remote_debugging"`
+	RemoteDebuggingVersion string                    `tfschema:"remote_debugging_version"`
+	ScmType                string                    `tfschema:"scm_type"`
+	Use32BitWorker         bool                      `tfschema:"use_32_bit_worker"`
+	WebSockets             bool                      `tfschema:"websockets"`
+	FtpsState              string                    `tfschema:"ftps_state"`
+	HealthCheckPath        string                    `tfschema:"health_check_path"`
+	NumberOfWorkers        int                       `tfschema:"number_of_workers"`
+	ApplicationStack       []ApplicationStackWindows `tfschema:"application_stack"`
+	MinTlsVersion          string                    `tfschema:"minimum_tls_version"`
+	ScmMinTlsVersion       string                    `tfschema:"scm_minimum_tls_version"`
+	AutoSwapSlotName       string                    `tfschema:"auto_swap_slot_name"`
+	Cors                   []helpers.CorsSetting     `tfschema:"cors"`
+	LinuxFxVersion         string                    `tfschema:"linux_fx_version"`
+	WindowsFxVersion       string                    `tfschema:"windows_fx_version"`
 	// Push  []PushSetting `tfschema:"push"` // TODO - new block to (possibly) support?
 	// SiteLimits []SiteLimitsSettings `tfschema:"site_limits"` // TODO - New block to (possibly) support?
 	// VirtualApplications []VirtualApplications //TODO - New (computed?) block to (possibly) support?
@@ -55,176 +58,221 @@ type SiteConfig struct {
 	// AutoHealRules []AutoHealRule
 }
 
-func siteConfigSchema() *schema.Schema {
+type SiteConfigLinux struct {
+	AlwaysOn              bool     `tfschema:"always_on"`
+	ApiManagementConfigId string   `tfschema:"api_management_config_id"`
+	AppCommandLine        string   `tfschema:"app_command_line"`
+	DefaultDocuments      []string `tfschema:"default_documents"`
+	// DetailedErrorLogging bool `tfschema:"detailed_error_logging"` // TODO - New field to support, defaults to `false`
+	Http2Enabled            bool                    `tfschema:"http2_enabled"`
+	IpRestriction           []helpers.IpRestriction `tfschema:"ip_restriction"`
+	ScmUseMainIpRestriction bool                    `tfschema:"scm_use_main_ip_restriction"`
+	ScmIpRestriction        []helpers.IpRestriction `tfschema:"scm_ip_restriction"`
+	// LoadBalancing string `tfschema:"load_balancing_mode"` // TODO - New field to support, defaults to `LeastRequests`
+	LocalMysql             bool                    `tfschema:"local_mysql"`
+	ManagedPipelineMode    string                  `tfschema:"managed_pipeline_mode"`
+	RemoteDebugging        bool                    `tfschema:"remote_debugging"`
+	RemoteDebuggingVersion string                  `tfschema:"remote_debugging_version"`
+	ScmType                string                  `tfschema:"scm_type"`
+	Use32BitWorker         bool                    `tfschema:"use_32_bit_worker"`
+	WebSockets             bool                    `tfschema:"websockets"`
+	FtpsState              string                  `tfschema:"ftps_state"`
+	HealthCheckPath        string                  `tfschema:"health_check_path"`
+	NumberOfWorkers        int                     `tfschema:"number_of_workers"`
+	ApplicationStack       []ApplicationStackLinux `tfschema:"application_stack"`
+	MinTlsVersion          string                  `tfschema:"minimum_tls_version"`
+	ScmMinTlsVersion       string                  `tfschema:"scm_minimum_tls_version"`
+	AutoSwapSlotName       string                  `tfschema:"auto_swap_slot_name"`
+	Cors                   []helpers.CorsSetting   `tfschema:"cors"`
+	LinuxFxVersion         string                  `tfschema:"linux_fx_version"`
+	WindowsFxVersion       string                  `tfschema:"windows_fx_version"`
+	// Push  []PushSetting `tfschema:"push"` // TODO - new block to (possibly) support?
+	// SiteLimits []SiteLimitsSettings `tfschema:"site_limits"` // TODO - New block to (possibly) support?
+	// VirtualApplications []VirtualApplications //TODO - New (computed?) block to (possibly) support?
+	// Stacks
+	// TODO fields
+	// AutoHeal bool
+	// AutoHealRules []AutoHealRule
+}
+
+func siteConfigSchema(osType string) *schema.Schema {
+	siteConfigResource := &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"always_on": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
+
+			"api_management_config_id": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: apimValidate.ApiManagementID,
+			},
+
+			"app_command_line": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+
+			"application_stack": windowsApplicationStackSchema(),
+
+			"default_documents": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Computed: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+
+			"http2_enabled": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+
+			"ip_restriction": helpers.IpRestrictionSchema(),
+
+			"scm_use_main_ip_restriction": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+
+			"scm_ip_restriction": helpers.IpRestrictionSchema(),
+
+			"local_mysql": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
+
+			"managed_pipeline_mode": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				ValidateFunc: validation.StringInSlice([]string{
+					string(web.Classic),
+					string(web.Integrated),
+				}, true),
+			},
+
+			"remote_debugging": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+
+			"remote_debugging_version": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				ValidateFunc: validation.StringInSlice([]string{
+					"VS2017",
+					"VS2019",
+				}, false),
+				DiffSuppressFunc: suppress.CaseDifference,
+			},
+
+			"scm_type": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"use_32_bit_worker": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+
+			"websockets": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+
+			"ftps_state": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				ValidateFunc: validation.StringInSlice([]string{
+					string(web.AllAllowed),
+					string(web.Disabled),
+					string(web.FtpsOnly),
+				}, false),
+			},
+
+			"health_check_path": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+
+			"number_of_workers": {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validation.IntBetween(1, 100),
+			},
+
+			"minimum_tls_version": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				ValidateFunc: validation.StringInSlice([]string{
+					string(web.OneFullStopZero),
+					string(web.OneFullStopOne),
+					string(web.OneFullStopTwo),
+				}, false),
+			},
+
+			"scm_minimum_tls_version": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				ValidateFunc: validation.StringInSlice([]string{
+					string(web.OneFullStopZero),
+					string(web.OneFullStopOne),
+					string(web.OneFullStopTwo),
+				}, false),
+			},
+
+			"cors": helpers.CorsSettingsSchema(),
+
+			"auto_swap_slot_name": {
+				Type:     schema.TypeString,
+				Optional: true,
+				// TODO - Add slot name validation here?
+			},
+
+			"linux_fx_version": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"windows_fx_version": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+		},
+	}
+	switch osType {
+	case osTypeLinux:
+		siteConfigResource.Schema["application_stack"] = linuxApplicationStackSchema()
+	default:
+		siteConfigResource.Schema["application_stack"] = windowsApplicationStackSchema()
+	}
+
 	return &schema.Schema{
 		Type:     schema.TypeList,
 		Optional: true,
 		Computed: true,
 		MaxItems: 1,
-		Elem: &schema.Resource{
-			Schema: map[string]*schema.Schema{
-				"always_on": {
-					Type:     schema.TypeBool,
-					Optional: true,
-					Computed: true,
-				},
-
-				"api_management_config_id": {
-					Type:         schema.TypeString,
-					Optional:     true,
-					ValidateFunc: apimValidate.ApiManagementID,
-				},
-
-				"app_command_line": {
-					Type:     schema.TypeString,
-					Optional: true,
-				},
-
-				"windows_application_stack": windowsApplicationStackSchema(),
-
-				"default_documents": {
-					Type:     schema.TypeList,
-					Optional: true,
-					Computed: true,
-					Elem: &schema.Schema{
-						Type: schema.TypeString,
-					},
-				},
-
-				"http2_enabled": {
-					Type:     schema.TypeBool,
-					Optional: true,
-					Default:  false,
-				},
-
-				"ip_restriction": helpers.IpRestrictionSchema(),
-
-				"scm_use_main_ip_restriction": {
-					Type:     schema.TypeBool,
-					Optional: true,
-					Default:  false,
-				},
-
-				"scm_ip_restriction": helpers.IpRestrictionSchema(),
-
-				"local_mysql": {
-					Type:     schema.TypeBool,
-					Optional: true,
-					Computed: true,
-				},
-
-				"managed_pipeline_mode": {
-					Type:     schema.TypeString,
-					Optional: true,
-					Computed: true,
-					ValidateFunc: validation.StringInSlice([]string{
-						string(web.Classic),
-						string(web.Integrated),
-					}, true),
-				},
-
-				"remote_debugging": {
-					Type:     schema.TypeBool,
-					Optional: true,
-					Default:  false,
-				},
-
-				"remote_debugging_version": {
-					Type:     schema.TypeString,
-					Optional: true,
-					Computed: true,
-					ValidateFunc: validation.StringInSlice([]string{
-						"VS2017",
-						"VS2019",
-					}, false),
-					DiffSuppressFunc: suppress.CaseDifference,
-				},
-
-				"scm_type": {
-					Type:     schema.TypeString,
-					Computed: true,
-				},
-
-				"use_32_bit_worker": {
-					Type:     schema.TypeBool,
-					Optional: true,
-					Default:  false,
-				},
-
-				"websockets": {
-					Type:     schema.TypeBool,
-					Optional: true,
-					Default:  false,
-				},
-
-				"ftps_state": {
-					Type:     schema.TypeString,
-					Optional: true,
-					Computed: true,
-					ValidateFunc: validation.StringInSlice([]string{
-						string(web.AllAllowed),
-						string(web.Disabled),
-						string(web.FtpsOnly),
-					}, false),
-				},
-
-				"health_check_path": {
-					Type:     schema.TypeString,
-					Optional: true,
-				},
-
-				"number_of_workers": {
-					Type:         schema.TypeInt,
-					Optional:     true,
-					Computed:     true,
-					ValidateFunc: validation.IntBetween(1, 100),
-				},
-
-				"minimum_tls_version": {
-					Type:     schema.TypeString,
-					Optional: true,
-					Computed: true,
-					ValidateFunc: validation.StringInSlice([]string{
-						string(web.OneFullStopZero),
-						string(web.OneFullStopOne),
-						string(web.OneFullStopTwo),
-					}, false),
-				},
-
-				"scm_minimum_tls_version": {
-					Type:     schema.TypeString,
-					Optional: true,
-					Computed: true,
-					ValidateFunc: validation.StringInSlice([]string{
-						string(web.OneFullStopZero),
-						string(web.OneFullStopOne),
-						string(web.OneFullStopTwo),
-					}, false),
-				},
-
-				"cors": helpers.CorsSettingsSchema(),
-
-				"auto_swap_slot_name": {
-					Type:     schema.TypeString,
-					Optional: true,
-					// TODO - Add slot name validation here?
-				},
-
-				"linux_fx_version": {
-					Type:     schema.TypeString,
-					Computed: true,
-				},
-
-				"windows_fx_version": {
-					Type:     schema.TypeString,
-					Computed: true,
-				},
-			},
-		},
+		Elem:     siteConfigResource,
 	}
 }
 
-type WindowsApplicationStack struct {
+type ApplicationStackWindows struct {
 	NetFrameworkVersion     string `tfschema:"dotnet_framework_version"`
 	PhpVersion              string `tfschema:"php_version"`
 	JavaVersion             string `tfschema:"java_version"`
@@ -235,6 +283,7 @@ type WindowsApplicationStack struct {
 	DockerContainerName     string `tfschema:"docker_container_name"`
 	DockerContainerRegistry string `tfschema:"docker_container_registry"`
 	DockerContainerTag      string `tfschema:"docker_container_tag"`
+	CurrentStack            string `tfschema:"current_stack"`
 }
 
 // Version information for the below validations was taken in part from - https://github.com/Azure/app-service-linux-docs/tree/master/Runtime_Support
@@ -273,7 +322,8 @@ func windowsApplicationStackSchema() *schema.Schema {
 					Type:     schema.TypeString,
 					Optional: true,
 					ValidateFunc: validation.StringInSlice([]string{
-						"2.7", // 3.x is "default" and results in empty string return, because... ¯\_(ツ)_/¯
+						"2.7",
+						"3.4.0",
 					}, false),
 				},
 
@@ -290,7 +340,7 @@ func windowsApplicationStackSchema() *schema.Schema {
 						"14-LTS",
 					}, false),
 					ConflictsWith: []string{
-						"site_config.0.windows_application_stack.0.java_version",
+						"site_config.0.application_stack.0.java_version",
 					},
 				},
 
@@ -314,7 +364,7 @@ func windowsApplicationStackSchema() *schema.Schema {
 						"TOMCAT",
 					}, false),
 					RequiredWith: []string{
-						"site_config.0.windows_application_stack.0.java_container_version",
+						"site_config.0.application_stack.0.java_container_version",
 					},
 				},
 
@@ -323,7 +373,7 @@ func windowsApplicationStackSchema() *schema.Schema {
 					Optional: true,
 					Computed: true,
 					RequiredWith: []string{
-						"site_config.0.windows_application_stack.0.java_container",
+						"site_config.0.application_stack.0.java_container",
 					},
 				},
 
@@ -332,8 +382,8 @@ func windowsApplicationStackSchema() *schema.Schema {
 					Optional:     true,
 					ValidateFunc: validation.StringIsNotEmpty,
 					RequiredWith: []string{
-						"site_config.0.windows_application_stack.0.docker_container_registry",
-						"site_config.0.windows_application_stack.0.docker_container_tag",
+						"site_config.0.application_stack.0.docker_container_registry",
+						"site_config.0.application_stack.0.docker_container_tag",
 					},
 				},
 
@@ -342,8 +392,8 @@ func windowsApplicationStackSchema() *schema.Schema {
 					Optional:     true,
 					ValidateFunc: validation.StringIsNotEmpty,
 					RequiredWith: []string{
-						"site_config.0.windows_application_stack.0.docker_container_name",
-						"site_config.0.windows_application_stack.0.docker_container_tag",
+						"site_config.0.application_stack.0.docker_container_name",
+						"site_config.0.application_stack.0.docker_container_tag",
 					},
 				},
 
@@ -352,8 +402,144 @@ func windowsApplicationStackSchema() *schema.Schema {
 					Optional:     true,
 					ValidateFunc: validation.StringIsNotEmpty,
 					RequiredWith: []string{
-						"site_config.0.windows_application_stack.0.docker_container_name",
-						"site_config.0.windows_application_stack.0.docker_container_registry",
+						"site_config.0.application_stack.0.docker_container_name",
+						"site_config.0.application_stack.0.docker_container_registry",
+					},
+				},
+
+				"current_stack": {
+					Type:     schema.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"dotnet",
+						"node",
+						"python",
+						"php",
+						"java",
+					}, false),
+				},
+			},
+		},
+	}
+}
+
+type ApplicationStackLinux struct {
+	NetFrameworkVersion string `tfschema:"dotnet_framework_version"`
+	PhpVersion          string `tfschema:"php_version"`
+	PythonVersion       string `tfschema:"python_version"` // Linux Only?
+	NodeVersion         string `tfschema:"node_version"`
+	JavaVersion         string `tfschema:"java_version"`
+	JavaServer          string `tfschema:"java_server"`
+	JavaServerVersion   string `tfschema:"java_server_version"`
+	DockerImageTag      string `tfschema:"docker_image_tag"`
+	DockerImage         string `tfschema:"docker_image"`
+	RubyVersion         string `tfschema:"ruby_version"`
+}
+
+// version information in the validation here was taken mostly from - `az webapp list-runtimes --linux`
+func linuxApplicationStackSchema() *schema.Schema {
+	return &schema.Schema{
+		Type:     schema.TypeList,
+		Optional: true,
+		Computed: true,
+		MaxItems: 1,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"dotnet_framework_version": { // Windows Only
+					Type:     schema.TypeString,
+					Optional: true,
+					Computed: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"2.1",
+						"3.1",
+						"5.0",
+					}, false),
+				},
+
+				"php_version": {
+					Type:     schema.TypeString,
+					Optional: true,
+					Computed: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"5.6", // TODO - Remove? 5.6 is available, but deprecated in the service
+						"7.2", // TODO - Remove? 7.2 is available, but deprecated in the service
+						"7.3",
+						"7.4",
+					}, false),
+				},
+
+				"python_version": {
+					Type:     schema.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"2.7", // TODO - Remove? 2.7 is available, but deprecated in the service
+						"3.6",
+						"3.7",
+						"3.8",
+					}, false),
+				},
+
+				"node_version": { // Discarded by service if JavaVersion is specified
+					Type:     schema.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"10.1",   // TODO - Remove?  Deprecated
+						"10.6",   // TODO - Remove?  Deprecated
+						"10.14",  // TODO - Remove?  Deprecated
+						"10-lts", // TODO - Remove?  Deprecated
+						"12-lts",
+						"14-lts",
+					}, false),
+					ConflictsWith: []string{
+						"site_config.0.application_stack.0.java_version",
+					},
+				},
+
+				"ruby_version": {
+					Type:     schema.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"2.5",
+						"2.6",
+					}, false),
+				},
+
+				"java_version": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					ValidateFunc: validate.NoEmptyStrings, // There a significant number of variables here, and the versions are not uniformly formatted.
+					// TODO - Needs notes in the docs for this to help users navigate the inconsistencies in the service. e.g. jre8 va java8 etc
+				},
+
+				"java_server": {Type: schema.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						"JAVA",
+						"TOMCAT",
+						"JBOSSEAP",
+					}, false),
+				},
+
+				"java_server_version": {
+					Type:     schema.TypeString,
+					Optional: true,
+				},
+
+				"docker_image": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					ValidateFunc: validation.StringIsNotEmpty,
+					RequiredWith: []string{
+						"site_config.0.application_stack.0.docker_image_tag",
+					},
+				},
+
+				"docker_image_tag": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					ValidateFunc: validation.StringIsNotEmpty,
+					RequiredWith: []string{
+						"site_config.0.application_stack.0.docker_image",
 					},
 				},
 			},
@@ -744,11 +930,12 @@ func httpLogBlobStorageSchema() *schema.Schema {
 	}
 }
 
-func expandSiteConfig(siteConfig []SiteConfig, kind string) (*web.SiteConfig, error) {
+func expandSiteConfigWindows(siteConfig []SiteConfigWindows) (*web.SiteConfig, *string, error) {
 	if len(siteConfig) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	expanded := &web.SiteConfig{}
+	currentStack := ""
 
 	for _, v := range siteConfig {
 		expanded.AlwaysOn = utils.Bool(v.AlwaysOn)
@@ -763,8 +950,8 @@ func expandSiteConfig(siteConfig []SiteConfig, kind string) (*web.SiteConfig, er
 			expanded.AppCommandLine = utils.String(v.AppCommandLine)
 		}
 
-		if len(v.WindowsApplicationStack) == 1 {
-			winAppStack := v.WindowsApplicationStack[0]
+		if len(v.ApplicationStack) == 1 {
+			winAppStack := v.ApplicationStack[0]
 			if winAppStack.NetFrameworkVersion != "" {
 				expanded.NetFrameworkVersion = utils.String(winAppStack.NetFrameworkVersion)
 			}
@@ -795,6 +982,144 @@ func expandSiteConfig(siteConfig []SiteConfig, kind string) (*web.SiteConfig, er
 
 			if winAppStack.DockerContainerName != "" {
 				expanded.WindowsFxVersion = utils.String(fmt.Sprintf("DOCKER|%s/%s:%s", winAppStack.DockerContainerRegistry, winAppStack.DockerContainerName, winAppStack.DockerContainerTag))
+			}
+			currentStack = winAppStack.CurrentStack
+		}
+
+		if len(v.DefaultDocuments) != 0 {
+			expanded.DefaultDocuments = &v.DefaultDocuments
+		}
+
+		expanded.HTTP20Enabled = utils.Bool(v.Http2Enabled)
+
+		if len(v.IpRestriction) != 0 {
+			ipRestrictions, err := helpers.ExpandIpRestrictions(v.IpRestriction)
+			if err != nil {
+				return nil, nil, err
+			}
+			expanded.IPSecurityRestrictions = ipRestrictions
+		}
+
+		expanded.ScmIPSecurityRestrictionsUseMain = utils.Bool(v.ScmUseMainIpRestriction)
+
+		if len(v.ScmIpRestriction) != 0 {
+			scmIpRestrictions, err := helpers.ExpandIpRestrictions(v.ScmIpRestriction)
+			if err != nil {
+				return nil, nil, err
+			}
+			expanded.ScmIPSecurityRestrictions = scmIpRestrictions
+		}
+
+		expanded.LocalMySQLEnabled = utils.Bool(v.LocalMysql)
+
+		if v.ManagedPipelineMode != "" {
+			expanded.ManagedPipelineMode = web.ManagedPipelineMode(v.ManagedPipelineMode)
+		}
+
+		if v.RemoteDebugging {
+			expanded.RemoteDebuggingEnabled = utils.Bool(v.RemoteDebugging)
+		}
+
+		if v.RemoteDebuggingVersion != "" {
+			expanded.RemoteDebuggingVersion = utils.String(v.RemoteDebuggingVersion)
+		}
+
+		if v.ScmType != "" {
+			expanded.ScmType = web.ScmType(v.ScmType)
+		}
+
+		expanded.Use32BitWorkerProcess = utils.Bool(v.Use32BitWorker)
+
+		expanded.WebSocketsEnabled = utils.Bool(v.WebSockets)
+
+		if v.FtpsState != "" {
+			expanded.FtpsState = web.FtpsState(v.FtpsState)
+		}
+
+		if v.HealthCheckPath != "" {
+			expanded.HealthCheckPath = utils.String(v.HealthCheckPath)
+		}
+
+		if v.NumberOfWorkers != 0 {
+			expanded.NumberOfWorkers = utils.Int32(int32(v.NumberOfWorkers))
+		}
+
+		//if strings.EqualFold(kind, "Windows") {
+		//	// `WindowsFxVersion` is only for Docker Image specification, which we need to collect from app_settings
+		//	expanded.WindowsFxVersion = utils.String("")
+		//}
+
+		if v.MinTlsVersion != "" {
+			expanded.MinTLSVersion = web.SupportedTLSVersions(v.MinTlsVersion)
+		}
+
+		if v.ScmMinTlsVersion != "" {
+			expanded.ScmMinTLSVersion = web.SupportedTLSVersions(v.ScmMinTlsVersion)
+		}
+
+		if v.AutoSwapSlotName != "" {
+			expanded.AutoSwapSlotName = utils.String(v.AutoSwapSlotName)
+		}
+
+		if len(v.Cors) != 0 {
+			expanded.Cors = helpers.ExpandCorsSettings(v.Cors)
+		}
+	}
+
+	return expanded, &currentStack, nil
+}
+
+func expandSiteConfigLinux(siteConfig []SiteConfigLinux, kind string) (*web.SiteConfig, error) {
+	// TODO - Make this Linux flavoured
+	if len(siteConfig) == 0 {
+		return nil, nil
+	}
+	expanded := &web.SiteConfig{}
+
+	for _, v := range siteConfig {
+		expanded.AlwaysOn = utils.Bool(v.AlwaysOn)
+
+		if v.ApiManagementConfigId != "" {
+			expanded.APIManagementConfig = &web.APIManagementConfig{
+				ID: utils.String(v.ApiManagementConfigId),
+			}
+		}
+
+		if v.AppCommandLine != "" {
+			expanded.AppCommandLine = utils.String(v.AppCommandLine)
+		}
+
+		if len(v.ApplicationStack) == 1 {
+			linuxAppStack := v.ApplicationStack[0]
+			if linuxAppStack.NetFrameworkVersion != "" {
+				//expanded.NetFrameworkVersion = utils.String(fmt.Sprintf("v%s", linuxAppStack.NetFrameworkVersion))
+				expanded.LinuxFxVersion = utils.String(fmt.Sprintf("DOTNETCORE|%s", linuxAppStack.NetFrameworkVersion))
+			}
+
+			if linuxAppStack.PhpVersion != "" {
+				expanded.LinuxFxVersion = utils.String(fmt.Sprintf("PHP|%s", linuxAppStack.PhpVersion))
+			}
+
+			if linuxAppStack.NodeVersion != "" {
+				expanded.LinuxFxVersion = utils.String(fmt.Sprintf("NODE|%s", linuxAppStack.NodeVersion))
+			}
+
+			if linuxAppStack.PythonVersion != "" {
+				expanded.LinuxFxVersion = utils.String(fmt.Sprintf("PYTHON|%s", linuxAppStack.PythonVersion))
+			}
+
+			if linuxAppStack.JavaServer != "" {
+				// (@jackofallops) - Java has some special cases for Java SE when using specific versions of the runtime, resulting in this string
+				// being formatted in the form: `JAVA|u242` instead of the standard pattern of `JAVA|u242-java8` for example. This applies to jre8 and java11.
+				if linuxAppStack.JavaServer == "JAVA" && linuxAppStack.JavaServerVersion == "" {
+					expanded.LinuxFxVersion = utils.String(fmt.Sprintf("%s|%s", linuxAppStack.JavaServer, linuxAppStack.JavaVersion))
+				} else {
+					expanded.LinuxFxVersion = utils.String(fmt.Sprintf("%s|%s-%s", linuxAppStack.JavaServer, linuxAppStack.JavaServerVersion, linuxAppStack.JavaVersion))
+				}
+			}
+
+			if linuxAppStack.DockerImage != "" {
+				expanded.LinuxFxVersion = utils.String(fmt.Sprintf("DOCKER|%s:%s", linuxAppStack.DockerImage, linuxAppStack.DockerImageTag))
 			}
 		}
 
@@ -855,16 +1180,6 @@ func expandSiteConfig(siteConfig []SiteConfig, kind string) (*web.SiteConfig, er
 		if v.NumberOfWorkers != 0 {
 			expanded.NumberOfWorkers = utils.Int32(int32(v.NumberOfWorkers))
 		}
-
-		if strings.EqualFold(kind, "linux") {
-			// TODO - expand schema for linux stack strings
-			expanded.LinuxFxVersion = utils.String("")
-		}
-
-		//if strings.EqualFold(kind, "Windows") {
-		//	// `WindowsFxVersion` is only for Docker Image specification, which we need to collect from app_settings
-		//	expanded.WindowsFxVersion = utils.String("")
-		//}
 
 		if v.MinTlsVersion != "" {
 			expanded.MinTLSVersion = web.SupportedTLSVersions(v.MinTlsVersion)
@@ -1139,12 +1454,12 @@ func flattenLogsConfig(logsConfig web.SiteLogsConfig) []LogsConfig {
 	return []LogsConfig{logs}
 }
 
-func flattenSiteConfig(appSiteConfig *web.SiteConfig) []SiteConfig {
+func flattenSiteConfigWindows(appSiteConfig *web.SiteConfig) []SiteConfigWindows {
 	if appSiteConfig == nil {
 		return nil
 	}
 
-	siteConfig := SiteConfig{
+	siteConfig := SiteConfigWindows{
 		ManagedPipelineMode: string(appSiteConfig.ManagedPipelineMode),
 		ScmType:             string(appSiteConfig.ScmType),
 		FtpsState:           string(appSiteConfig.FtpsState),
@@ -1212,7 +1527,7 @@ func flattenSiteConfig(appSiteConfig *web.SiteConfig) []SiteConfig {
 		siteConfig.NumberOfWorkers = int(*appSiteConfig.NumberOfWorkers)
 	}
 
-	var winAppStack WindowsApplicationStack
+	var winAppStack ApplicationStackWindows
 	if appSiteConfig.NetFrameworkVersion != nil {
 		winAppStack.NetFrameworkVersion = *appSiteConfig.NetFrameworkVersion
 	}
@@ -1251,7 +1566,7 @@ func flattenSiteConfig(appSiteConfig *web.SiteConfig) []SiteConfig {
 		winAppStack.DockerContainerName = strings.TrimPrefix(parts[0], fmt.Sprintf("%s/", path[0]))
 	}
 
-	siteConfig.WindowsApplicationStack = []WindowsApplicationStack{winAppStack}
+	siteConfig.ApplicationStack = []ApplicationStackWindows{winAppStack}
 
 	if appSiteConfig.LinuxFxVersion != nil {
 		siteConfig.LinuxFxVersion = *appSiteConfig.LinuxFxVersion
@@ -1274,7 +1589,115 @@ func flattenSiteConfig(appSiteConfig *web.SiteConfig) []SiteConfig {
 		siteConfig.Cors = []helpers.CorsSetting{cors}
 	}
 
-	return []SiteConfig{siteConfig}
+	return []SiteConfigWindows{siteConfig}
+}
+
+func flattenSiteConfigLinux(appSiteConfig *web.SiteConfig) []SiteConfigLinux {
+	// TODO - Make this Linux flavoured...
+	if appSiteConfig == nil {
+		return nil
+	}
+
+	siteConfig := SiteConfigLinux{
+		ManagedPipelineMode: string(appSiteConfig.ManagedPipelineMode),
+		ScmType:             string(appSiteConfig.ScmType),
+		FtpsState:           string(appSiteConfig.FtpsState),
+		MinTlsVersion:       string(appSiteConfig.MinTLSVersion),
+		ScmMinTlsVersion:    string(appSiteConfig.ScmMinTLSVersion),
+	}
+
+	if appSiteConfig.AlwaysOn != nil {
+		siteConfig.AlwaysOn = *appSiteConfig.AlwaysOn
+	}
+
+	if appSiteConfig.APIManagementConfig != nil && appSiteConfig.APIManagementConfig.ID != nil {
+		siteConfig.ApiManagementConfigId = *appSiteConfig.APIManagementConfig.ID
+	}
+
+	if appSiteConfig.AppCommandLine != nil {
+		siteConfig.AppCommandLine = *appSiteConfig.AppCommandLine
+	}
+
+	if appSiteConfig.DefaultDocuments != nil {
+		siteConfig.DefaultDocuments = *appSiteConfig.DefaultDocuments
+	}
+
+	if appSiteConfig.HTTP20Enabled != nil {
+		siteConfig.Http2Enabled = *appSiteConfig.HTTP20Enabled
+	}
+
+	if appSiteConfig.IPSecurityRestrictions != nil {
+		siteConfig.IpRestriction = helpers.FlattenIpRestrictions(appSiteConfig.IPSecurityRestrictions)
+	}
+
+	if appSiteConfig.ScmIPSecurityRestrictionsUseMain != nil {
+		siteConfig.ScmUseMainIpRestriction = *appSiteConfig.ScmIPSecurityRestrictionsUseMain
+	}
+
+	if appSiteConfig.ScmIPSecurityRestrictions != nil {
+		siteConfig.ScmIpRestriction = helpers.FlattenIpRestrictions(appSiteConfig.ScmIPSecurityRestrictions)
+	}
+
+	if appSiteConfig.LocalMySQLEnabled != nil {
+		siteConfig.LocalMysql = *appSiteConfig.LocalMySQLEnabled
+	}
+
+	if appSiteConfig.RemoteDebuggingEnabled != nil {
+		siteConfig.RemoteDebugging = *appSiteConfig.RemoteDebuggingEnabled
+	}
+
+	if appSiteConfig.RemoteDebuggingVersion != nil {
+		siteConfig.RemoteDebuggingVersion = *appSiteConfig.RemoteDebuggingVersion
+	}
+
+	if appSiteConfig.Use32BitWorkerProcess != nil {
+		siteConfig.Use32BitWorker = *appSiteConfig.Use32BitWorkerProcess
+	}
+
+	if appSiteConfig.WebSocketsEnabled != nil {
+		siteConfig.WebSockets = *appSiteConfig.WebSocketsEnabled
+	}
+
+	if appSiteConfig.HealthCheckPath != nil {
+		siteConfig.HealthCheckPath = *appSiteConfig.HealthCheckPath
+	}
+
+	if appSiteConfig.NumberOfWorkers != nil {
+		siteConfig.NumberOfWorkers = int(*appSiteConfig.NumberOfWorkers)
+	}
+
+	var linuxAppStack ApplicationStackLinux
+
+	if appSiteConfig.LinuxFxVersion != nil {
+		siteConfig.LinuxFxVersion = *appSiteConfig.LinuxFxVersion
+		// Decode the string to docker values
+		linuxAppStack = decodeApplicationStackLinux(siteConfig.LinuxFxVersion)
+	}
+
+	siteConfig.ApplicationStack = []ApplicationStackLinux{linuxAppStack}
+
+	if appSiteConfig.LinuxFxVersion != nil {
+		siteConfig.LinuxFxVersion = *appSiteConfig.LinuxFxVersion
+	}
+
+	if appSiteConfig.AutoSwapSlotName != nil {
+		siteConfig.AutoSwapSlotName = *appSiteConfig.AutoSwapSlotName
+	}
+
+	if appSiteConfig.Cors != nil {
+		corsSettings := appSiteConfig.Cors
+		cors := helpers.CorsSetting{}
+		if corsSettings.SupportCredentials != nil {
+			cors.SupportCredentials = *corsSettings.SupportCredentials
+		}
+
+		if corsSettings.AllowedOrigins != nil {
+			cors.AllowedOrigins = *corsSettings.AllowedOrigins
+		}
+		siteConfig.Cors = []helpers.CorsSetting{cors}
+	}
+
+	return []SiteConfigLinux{siteConfig}
 }
 
 func flattenStorageAccounts(appStorageAccounts web.AzureStoragePropertyDictionaryResource) []StorageAccount {
