@@ -22,40 +22,39 @@ const osTypeWindows = "Windows"
 const osTypeLinux = "Linux"
 
 type SiteConfigWindows struct {
-	AlwaysOn                bool                    `tfschema:"always_on"`
-	ApiManagementConfigId   string                  `tfschema:"api_management_config_id"`
-	AppCommandLine          string                  `tfschema:"app_command_line"`
-	DefaultDocuments        []string                `tfschema:"default_documents"`
-	Http2Enabled            bool                    `tfschema:"http2_enabled"`
-	IpRestriction           []helpers.IpRestriction `tfschema:"ip_restriction"`
-	ScmUseMainIpRestriction bool                    `tfschema:"scm_use_main_ip_restriction"`
-	ScmIpRestriction        []helpers.IpRestriction `tfschema:"scm_ip_restriction"`
-	// LoadBalancing string `tfschema:"load_balancing_mode"` // TODO - New field to support, defaults to `LeastRequests`
-	LocalMysql             bool                      `tfschema:"local_mysql"`
-	ManagedPipelineMode    string                    `tfschema:"managed_pipeline_mode"`
-	RemoteDebugging        bool                      `tfschema:"remote_debugging"`
-	RemoteDebuggingVersion string                    `tfschema:"remote_debugging_version"`
-	ScmType                string                    `tfschema:"scm_type"`
-	Use32BitWorker         bool                      `tfschema:"use_32_bit_worker"`
-	WebSockets             bool                      `tfschema:"websockets"`
-	FtpsState              string                    `tfschema:"ftps_state"`
-	HealthCheckPath        string                    `tfschema:"health_check_path"`
-	NumberOfWorkers        int                       `tfschema:"number_of_workers"`
-	ApplicationStack       []ApplicationStackWindows `tfschema:"application_stack"`
-	MinTlsVersion          string                    `tfschema:"minimum_tls_version"`
-	ScmMinTlsVersion       string                    `tfschema:"scm_minimum_tls_version"`
-	AutoSwapSlotName       string                    `tfschema:"auto_swap_slot_name"`
-	Cors                   []helpers.CorsSetting     `tfschema:"cors"`
-	DetailedErrorLogging   bool                      `tfschema:"detailed_error_logging"`
-	LinuxFxVersion         string                    `tfschema:"linux_fx_version"`
-	WindowsFxVersion       string                    `tfschema:"windows_fx_version"`
-	// Push  []PushSetting `tfschema:"push"` // TODO - new block to (possibly) support?
+	AlwaysOn                bool                      `tfschema:"always_on"`
+	ApiManagementConfigId   string                    `tfschema:"api_management_config_id"`
+	AppCommandLine          string                    `tfschema:"app_command_line"`
+	DefaultDocuments        []string                  `tfschema:"default_documents"`
+	Http2Enabled            bool                      `tfschema:"http2_enabled"`
+	IpRestriction           []helpers.IpRestriction   `tfschema:"ip_restriction"`
+	ScmUseMainIpRestriction bool                      `tfschema:"scm_use_main_ip_restriction"`
+	ScmIpRestriction        []helpers.IpRestriction   `tfschema:"scm_ip_restriction"`
+	LoadBalancing           string                    `tfschema:"load_balancing_mode"` // TODO - New field to support, defaults to `LeastRequests`
+	LocalMysql              bool                      `tfschema:"local_mysql"`
+	ManagedPipelineMode     string                    `tfschema:"managed_pipeline_mode"`
+	RemoteDebugging         bool                      `tfschema:"remote_debugging"`
+	RemoteDebuggingVersion  string                    `tfschema:"remote_debugging_version"`
+	ScmType                 string                    `tfschema:"scm_type"`
+	Use32BitWorker          bool                      `tfschema:"use_32_bit_worker"`
+	WebSockets              bool                      `tfschema:"websockets"`
+	FtpsState               string                    `tfschema:"ftps_state"`
+	HealthCheckPath         string                    `tfschema:"health_check_path"`
+	NumberOfWorkers         int                       `tfschema:"number_of_workers"`
+	ApplicationStack        []ApplicationStackWindows `tfschema:"application_stack"`
+	VirtualApplications     []VirtualApplication      `tfschema:"virtual_application"`
+	MinTlsVersion           string                    `tfschema:"minimum_tls_version"`
+	ScmMinTlsVersion        string                    `tfschema:"scm_minimum_tls_version"`
+	AutoSwapSlotName        string                    `tfschema:"auto_swap_slot_name"`
+	Cors                    []helpers.CorsSetting     `tfschema:"cors"`
+	DetailedErrorLogging    bool                      `tfschema:"detailed_error_logging"`
+	LinuxFxVersion          string                    `tfschema:"linux_fx_version"`
+	WindowsFxVersion        string                    `tfschema:"windows_fx_version"`
+	// TODO new properties / blocks
+	// Push  []PushSetting `tfschema:"push"` // Blocked - no programatic way to connect to a notification hub, portal only.
 	// SiteLimits []SiteLimitsSettings `tfschema:"site_limits"` // TODO - New block to (possibly) support?
-	// VirtualApplications []VirtualApplications //TODO - New (computed?) block to (possibly) support?
-	// Stacks
-	// TODO fields
 	// AutoHeal bool
-	// AutoHealRules []AutoHealRule
+	// AutoHealRules []AutoHealRule - minefield!
 }
 
 type SiteConfigLinux struct {
@@ -67,29 +66,28 @@ type SiteConfigLinux struct {
 	IpRestriction           []helpers.IpRestriction `tfschema:"ip_restriction"`
 	ScmUseMainIpRestriction bool                    `tfschema:"scm_use_main_ip_restriction"`
 	ScmIpRestriction        []helpers.IpRestriction `tfschema:"scm_ip_restriction"`
-	// LoadBalancing string `tfschema:"load_balancing_mode"` // TODO - New field to support, defaults to `LeastRequests`
-	LocalMysql             bool                    `tfschema:"local_mysql"`
-	ManagedPipelineMode    string                  `tfschema:"managed_pipeline_mode"`
-	RemoteDebugging        bool                    `tfschema:"remote_debugging"`
-	RemoteDebuggingVersion string                  `tfschema:"remote_debugging_version"`
-	ScmType                string                  `tfschema:"scm_type"`
-	Use32BitWorker         bool                    `tfschema:"use_32_bit_worker"`
-	WebSockets             bool                    `tfschema:"websockets"`
-	FtpsState              string                  `tfschema:"ftps_state"`
-	HealthCheckPath        string                  `tfschema:"health_check_path"`
-	NumberOfWorkers        int                     `tfschema:"number_of_workers"`
-	ApplicationStack       []ApplicationStackLinux `tfschema:"application_stack"`
-	MinTlsVersion          string                  `tfschema:"minimum_tls_version"`
-	ScmMinTlsVersion       string                  `tfschema:"scm_minimum_tls_version"`
-	AutoSwapSlotName       string                  `tfschema:"auto_swap_slot_name"`
-	Cors                   []helpers.CorsSetting   `tfschema:"cors"`
-	DetailedErrorLogging   bool                    `tfschema:"detailed_error_logging"`
-	LinuxFxVersion         string                  `tfschema:"linux_fx_version"`
-	WindowsFxVersion       string                  `tfschema:"windows_fx_version"`
+	LoadBalancing           string                  `tfschema:"load_balancing_mode"` // TODO - New field to support, defaults to `LeastRequests`
+	LocalMysql              bool                    `tfschema:"local_mysql"`
+	ManagedPipelineMode     string                  `tfschema:"managed_pipeline_mode"`
+	RemoteDebugging         bool                    `tfschema:"remote_debugging"`
+	RemoteDebuggingVersion  string                  `tfschema:"remote_debugging_version"`
+	ScmType                 string                  `tfschema:"scm_type"`
+	Use32BitWorker          bool                    `tfschema:"use_32_bit_worker"`
+	WebSockets              bool                    `tfschema:"websockets"`
+	FtpsState               string                  `tfschema:"ftps_state"`
+	HealthCheckPath         string                  `tfschema:"health_check_path"`
+	NumberOfWorkers         int                     `tfschema:"number_of_workers"`
+	ApplicationStack        []ApplicationStackLinux `tfschema:"application_stack"`
+	MinTlsVersion           string                  `tfschema:"minimum_tls_version"`
+	ScmMinTlsVersion        string                  `tfschema:"scm_minimum_tls_version"`
+	AutoSwapSlotName        string                  `tfschema:"auto_swap_slot_name"`
+	Cors                    []helpers.CorsSetting   `tfschema:"cors"`
+	DetailedErrorLogging    bool                    `tfschema:"detailed_error_logging"`
+	LinuxFxVersion          string                  `tfschema:"linux_fx_version"`
+	WindowsFxVersion        string                  `tfschema:"windows_fx_version"`
 	// Push  []PushSetting `tfschema:"push"` // TODO - new block to (possibly) support?
 	// SiteLimits []SiteLimitsSettings `tfschema:"site_limits"` // TODO - New block to (possibly) support?
 	// VirtualApplications []VirtualApplications //TODO - New (computed?) block to (possibly) support?
-	// Stacks
 	// TODO fields
 	// AutoHeal bool
 	// AutoHealRules []AutoHealRule
@@ -144,6 +142,20 @@ func siteConfigSchema(osType string) *schema.Schema {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
+			},
+
+			"load_balancing_mode": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				ValidateFunc: validation.StringInSlice([]string{
+					"LeastRequests", // Service default
+					"WeightedRoundRobin",
+					"LeastResponseTime",
+					"WeightedTotalTraffic",
+					"RequestHash",
+					"PerSiteRoundRobin",
+				}, false),
 			},
 
 			"managed_pipeline_mode": {
@@ -264,6 +276,7 @@ func siteConfigSchema(osType string) *schema.Schema {
 		siteConfigResource.Schema["application_stack"] = linuxApplicationStackSchema()
 	default:
 		siteConfigResource.Schema["application_stack"] = windowsApplicationStackSchema()
+		siteConfigResource.Schema["virtual_application"] = virtualApplicationsSchema()
 	}
 
 	return &schema.Schema{
@@ -543,6 +556,72 @@ func linuxApplicationStackSchema() *schema.Schema {
 					ValidateFunc: validation.StringIsNotEmpty,
 					RequiredWith: []string{
 						"site_config.0.application_stack.0.docker_image",
+					},
+				},
+			},
+		},
+	}
+}
+
+type VirtualApplication struct {
+	VirtualPath        string             `tfschema:"virtual_path"`
+	PhysicalPath       string             `tfschema:"physical_path"`
+	Preload            bool               `tfschema:"preload"`
+	VirtualDirectories []VirtualDirectory `tfschema:"virtual_directory"`
+}
+
+type VirtualDirectory struct {
+	VirtualPath  string `tfschema:"virtual_path"`
+	PhysicalPath string `tfschema:"physical_path"`
+}
+
+func virtualApplicationsSchema() *schema.Schema {
+	return &schema.Schema{
+		Type:     schema.TypeSet,
+		Optional: true,
+		Computed: true,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"virtual_path": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					Computed:     true,
+					ValidateFunc: validate.NoEmptyStrings,
+				},
+
+				"physical_path": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					Computed:     true,
+					ValidateFunc: validate.NoEmptyStrings,
+				},
+
+				"preload": {
+					Type:     schema.TypeBool,
+					Optional: true,
+					Computed: true,
+				},
+
+				"virtual_directory": {
+					Type:     schema.TypeSet,
+					Computed: true,
+					Optional: true,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"virtual_path": {
+								Type:         schema.TypeString,
+								Optional:     true,
+								Computed:     true,
+								ValidateFunc: validate.NoEmptyStrings,
+							},
+
+							"physical_path": {
+								Type:         schema.TypeString,
+								Optional:     true,
+								Computed:     true,
+								ValidateFunc: validate.NoEmptyStrings,
+							},
+						},
 					},
 				},
 			},
@@ -989,6 +1068,10 @@ func expandSiteConfigWindows(siteConfig []SiteConfigWindows) (*web.SiteConfig, *
 		currentStack = winAppStack.CurrentStack
 	}
 
+	if winSiteConfig.VirtualApplications != nil {
+		expanded.VirtualApplications = expandVirtualApplications(winSiteConfig.VirtualApplications)
+	}
+
 	if len(winSiteConfig.DefaultDocuments) != 0 {
 		expanded.DefaultDocuments = &winSiteConfig.DefaultDocuments
 	}
@@ -1014,6 +1097,10 @@ func expandSiteConfigWindows(siteConfig []SiteConfigWindows) (*web.SiteConfig, *
 	}
 
 	expanded.LocalMySQLEnabled = utils.Bool(winSiteConfig.LocalMysql)
+
+	if winSiteConfig.LoadBalancing != "" {
+		expanded.LoadBalancing = web.SiteLoadBalancing(winSiteConfig.LoadBalancing)
+	}
 
 	if winSiteConfig.ManagedPipelineMode != "" {
 		expanded.ManagedPipelineMode = web.ManagedPipelineMode(winSiteConfig.ManagedPipelineMode)
@@ -1143,6 +1230,10 @@ func expandSiteConfigLinux(siteConfig []SiteConfigLinux) (*web.SiteConfig, error
 	}
 
 	expanded.LocalMySQLEnabled = utils.Bool(linuxSiteConfig.LocalMysql)
+
+	if linuxSiteConfig.LoadBalancing != "" {
+		expanded.LoadBalancing = web.SiteLoadBalancing(linuxSiteConfig.LoadBalancing)
+	}
 
 	if linuxSiteConfig.ManagedPipelineMode != "" {
 		expanded.ManagedPipelineMode = web.ManagedPipelineMode(linuxSiteConfig.ManagedPipelineMode)
@@ -1322,6 +1413,33 @@ func expandConnectionStrings(connectionStringsConfig []ConnectionString) *web.Co
 	}
 }
 
+func expandVirtualApplications(virtualApplicationConfig []VirtualApplication) *[]web.VirtualApplication {
+	if len(virtualApplicationConfig) == 0 {
+		return nil
+	}
+	result := make([]web.VirtualApplication, 0)
+	for _, v := range virtualApplicationConfig {
+		virtualApp := web.VirtualApplication{
+			VirtualPath:    utils.String(v.VirtualPath),
+			PhysicalPath:   utils.String(v.PhysicalPath),
+			PreloadEnabled: utils.Bool(v.Preload),
+		}
+		if len(v.VirtualDirectories) > 0 {
+			virtualDirs := make([]web.VirtualDirectory, 0)
+			for _, d := range v.VirtualDirectories {
+				virtualDirs = append(virtualDirs, web.VirtualDirectory{
+					VirtualPath:  utils.String(d.VirtualPath),
+					PhysicalPath: utils.String(d.PhysicalPath),
+				})
+			}
+			virtualApp.VirtualDirectories = &virtualDirs
+		}
+
+		result = append(result, virtualApp)
+	}
+	return &result
+}
+
 func flattenBackupConfig(backupRequest web.BackupRequest) []Backup {
 	if backupRequest.BackupRequestProperties == nil {
 		return nil
@@ -1457,9 +1575,7 @@ func flattenSiteConfigWindows(appSiteConfig *web.SiteConfig) []SiteConfigWindows
 		ScmMinTlsVersion:    string(appSiteConfig.ScmMinTLSVersion),
 	}
 
-	if appSiteConfig.AlwaysOn != nil {
-		siteConfig.AlwaysOn = *appSiteConfig.AlwaysOn
-	}
+	siteConfig.AlwaysOn = *appSiteConfig.AlwaysOn
 
 	if appSiteConfig.APIManagementConfig != nil && appSiteConfig.APIManagementConfig.ID != nil {
 		siteConfig.ApiManagementConfigId = *appSiteConfig.APIManagementConfig.ID
@@ -1475,25 +1591,21 @@ func flattenSiteConfigWindows(appSiteConfig *web.SiteConfig) []SiteConfigWindows
 
 	siteConfig.DetailedErrorLogging = *appSiteConfig.DetailedErrorLoggingEnabled
 
-	if appSiteConfig.HTTP20Enabled != nil {
-		siteConfig.Http2Enabled = *appSiteConfig.HTTP20Enabled
-	}
+	siteConfig.Http2Enabled = *appSiteConfig.HTTP20Enabled
 
 	if appSiteConfig.IPSecurityRestrictions != nil {
 		siteConfig.IpRestriction = helpers.FlattenIpRestrictions(appSiteConfig.IPSecurityRestrictions)
 	}
 
-	if appSiteConfig.ScmIPSecurityRestrictionsUseMain != nil {
-		siteConfig.ScmUseMainIpRestriction = *appSiteConfig.ScmIPSecurityRestrictionsUseMain
-	}
+	siteConfig.ScmUseMainIpRestriction = *appSiteConfig.ScmIPSecurityRestrictionsUseMain
 
 	if appSiteConfig.ScmIPSecurityRestrictions != nil {
 		siteConfig.ScmIpRestriction = helpers.FlattenIpRestrictions(appSiteConfig.ScmIPSecurityRestrictions)
 	}
 
-	if appSiteConfig.LocalMySQLEnabled != nil {
-		siteConfig.LocalMysql = *appSiteConfig.LocalMySQLEnabled
-	}
+	siteConfig.LocalMysql = *appSiteConfig.LocalMySQLEnabled
+
+	siteConfig.LoadBalancing = string(appSiteConfig.LoadBalancing)
 
 	if appSiteConfig.RemoteDebuggingEnabled != nil {
 		siteConfig.RemoteDebugging = *appSiteConfig.RemoteDebuggingEnabled
@@ -1507,9 +1619,7 @@ func flattenSiteConfigWindows(appSiteConfig *web.SiteConfig) []SiteConfigWindows
 		siteConfig.Use32BitWorker = *appSiteConfig.Use32BitWorkerProcess
 	}
 
-	if appSiteConfig.WebSocketsEnabled != nil {
-		siteConfig.WebSockets = *appSiteConfig.WebSocketsEnabled
-	}
+	siteConfig.WebSockets = *appSiteConfig.WebSocketsEnabled
 
 	if appSiteConfig.HealthCheckPath != nil {
 		siteConfig.HealthCheckPath = *appSiteConfig.HealthCheckPath
@@ -1559,6 +1669,8 @@ func flattenSiteConfigWindows(appSiteConfig *web.SiteConfig) []SiteConfigWindows
 	}
 
 	siteConfig.ApplicationStack = []ApplicationStackWindows{winAppStack}
+
+	siteConfig.VirtualApplications = flattenVirtualApplications(appSiteConfig.VirtualApplications)
 
 	if appSiteConfig.LinuxFxVersion != nil {
 		siteConfig.LinuxFxVersion = *appSiteConfig.LinuxFxVersion
@@ -1616,9 +1728,7 @@ func flattenSiteConfigLinux(appSiteConfig *web.SiteConfig) []SiteConfigLinux {
 
 	siteConfig.DetailedErrorLogging = *appSiteConfig.DetailedErrorLoggingEnabled
 
-	if appSiteConfig.HTTP20Enabled != nil {
-		siteConfig.Http2Enabled = *appSiteConfig.HTTP20Enabled
-	}
+	siteConfig.Http2Enabled = *appSiteConfig.HTTP20Enabled
 
 	if appSiteConfig.IPSecurityRestrictions != nil {
 		siteConfig.IpRestriction = helpers.FlattenIpRestrictions(appSiteConfig.IPSecurityRestrictions)
@@ -1631,6 +1741,8 @@ func flattenSiteConfigLinux(appSiteConfig *web.SiteConfig) []SiteConfigLinux {
 	}
 
 	siteConfig.LocalMysql = *appSiteConfig.LocalMySQLEnabled
+
+	siteConfig.LoadBalancing = string(appSiteConfig.LoadBalancing)
 
 	siteConfig.RemoteDebugging = *appSiteConfig.RemoteDebuggingEnabled
 
@@ -1764,4 +1876,33 @@ func flattenAppSettings(input web.StringDictionary) map[string]string {
 	}
 
 	return appSettings
+}
+
+func flattenVirtualApplications(appVirtualApplications *[]web.VirtualApplication) []VirtualApplication {
+	if appVirtualApplications == nil {
+		return nil
+	}
+
+	var virtualApplications []VirtualApplication
+	for _, v := range *appVirtualApplications {
+		virtualApp := VirtualApplication{
+			VirtualPath:  utils.NormalizeNilableString(v.VirtualPath),
+			PhysicalPath: utils.NormalizeNilableString(v.PhysicalPath),
+			Preload:      *v.PreloadEnabled,
+		}
+		if v.VirtualDirectories != nil && len(*v.VirtualDirectories) > 0 {
+			virtualDirs := make([]VirtualDirectory, 0)
+			for _, d := range *v.VirtualDirectories {
+				virtualDir := VirtualDirectory{
+					VirtualPath:  utils.NormalizeNilableString(d.VirtualPath),
+					PhysicalPath: utils.NormalizeNilableString(d.PhysicalPath),
+				}
+				virtualDirs = append(virtualDirs, virtualDir)
+			}
+			virtualApp.VirtualDirectories = virtualDirs
+		}
+		virtualApplications = append(virtualApplications, virtualApp)
+	}
+
+	return virtualApplications
 }

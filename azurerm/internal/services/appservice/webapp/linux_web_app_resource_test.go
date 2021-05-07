@@ -42,6 +42,8 @@ func TestAccLinuxWebApp_detailedErrorLogging(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 				check.That(data.ResourceName).Key("kind").HasValue("app,linux"),
+				check.That(data.ResourceName).Key("logs.0.detailed_error_messages").HasValue("false"),
+				check.That(data.ResourceName).Key("site_config.0.detailed_error_logging").HasValue("false"),
 			),
 		},
 		data.ImportStep(),
@@ -50,11 +52,31 @@ func TestAccLinuxWebApp_detailedErrorLogging(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 				check.That(data.ResourceName).Key("kind").HasValue("app,linux"),
+				check.That(data.ResourceName).Key("logs.0.detailed_error_messages").HasValue("true"),
+				check.That(data.ResourceName).Key("site_config.0.detailed_error_logging").HasValue("true"),
 			),
 		},
 		data.ImportStep(),
 		{
 			Config: r.detailedLogging(data, false),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("kind").HasValue("app,linux"),
+				check.That(data.ResourceName).Key("logs.0.detailed_error_messages").HasValue("false"),
+				check.That(data.ResourceName).Key("site_config.0.detailed_error_logging").HasValue("false"),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccLinuxWebApp_loadBalancing(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_linux_web_app", "test")
+	r := LinuxWebAppResource{}
+
+	data.ResourceTest(t, r, []resource.TestStep{
+		{
+			Config: r.loadBalancing(data, "WeightedRoundRobin"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 				check.That(data.ResourceName).Key("kind").HasValue("app,linux"),
@@ -455,7 +477,7 @@ func TestAccLinuxWebApp_withJava8JBOSSEAP72(t *testing.T) {
 			Config: r.java(data, "jre8", "JBOSSEAP", "7.2"),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
-				check.That(data.ResourceName).Key("site_config.0.linux_fx_version").HasValue("JBOSSEAP|7.2-java8"),
+				check.That(data.ResourceName).Key("site_config.0.linux_fx_version").HasValue("JBOSSEAP|7.2-jre8"),
 			),
 		},
 		data.ImportStep(),
@@ -520,7 +542,7 @@ resource "azurerm_linux_web_app" "test" {
 `, r.baseTemplate(data), data.RandomInteger)
 }
 
-func (r LinuxWebAppResource) detailedLogging(data acceptance.TestData, detailedErrorLogging bool) string {
+func (r LinuxWebAppResource) loadBalancing(data acceptance.TestData, loadBalancingMode string) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -535,7 +557,28 @@ resource "azurerm_linux_web_app" "test" {
   service_plan_id     = azurerm_app_service_plan.test.id
 
   site_config {
-    detailed_error_logging = %t
+    load_balancing_mode = "%s"
+  }
+}
+`, r.baseTemplate(data), data.RandomInteger, loadBalancingMode)
+}
+
+func (r LinuxWebAppResource) detailedLogging(data acceptance.TestData, detailedErrorLogging bool) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+%s
+
+resource "azurerm_linux_web_app" "test" {
+  name                = "acctestWA-%d"
+  location            = azurerm_resource_group.test.location
+  resource_group_name = azurerm_resource_group.test.name
+  service_plan_id     = azurerm_app_service_plan.test.id
+
+  logs {
+    detailed_error_messages = %t
   }
 }
 `, r.baseTemplate(data), data.RandomInteger, detailedErrorLogging)
@@ -721,7 +764,7 @@ resource "azurerm_app_service_plan" "test" {
 `, data.RandomInteger, data.Locations.Primary, data.RandomInteger)
 }
 
-func (r LinuxWebAppResource) templateWithStorageAccount(data acceptance.TestData, osType string) string {
+func (r LinuxWebAppResource) templateWithStorageAccount(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 
 %s

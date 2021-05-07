@@ -25,6 +25,7 @@ func TestAccWindowsWebApp_basic(t *testing.T) {
 			Config: r.basic(data),
 			Check: resource.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("site_config.0.virtual_application.#").HasValue("1"),
 			),
 		},
 		data.ImportStep(),
@@ -78,6 +79,22 @@ func TestAccWindowsWebApp_requiresImport(t *testing.T) {
 			),
 		},
 		data.RequiresImportErrorStep(r.requiresImport),
+	})
+}
+
+func TestAccWindowsWebApp_virtualDirectories(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_web_app", "test")
+	r := WindowsWebAppResource{}
+
+	data.ResourceTest(t, r, []resource.TestStep{
+		{
+			Config: r.virtualDirectories(data),
+			Check: resource.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("site_config.0.virtual_application.#").HasValue("2"),
+			),
+		},
+		data.ImportStep(),
 	})
 }
 
@@ -451,6 +468,50 @@ resource "azurerm_windows_web_app" "test" {
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   service_plan_id     = azurerm_app_service_plan.test.id
+}
+`, r.baseTemplate(data), data.RandomInteger)
+}
+
+func (r WindowsWebAppResource) virtualDirectories(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+%s
+
+resource "azurerm_windows_web_app" "test" {
+  name                = "acctestWA-%d"
+  location            = azurerm_resource_group.test.location
+  resource_group_name = azurerm_resource_group.test.name
+  service_plan_id     = azurerm_app_service_plan.test.id
+
+  site_config {
+    virtual_application {
+      virtual_path = "/"
+      physical_path = "site\\wwwroot"
+
+      virtual_directory {
+        virtual_path  = "/stuff"
+        physical_path = "site\\stuff"
+      }
+    }
+
+    virtual_application {
+      virtual_path  = "/static-content"
+      physical_path = "site\\static"
+
+      virtual_directory {
+        virtual_path  = "/images"
+        physical_path = "site\\static\\images"
+      }
+
+      virtual_directory {
+        virtual_path  = "/css"
+        physical_path = "site\\static\\css"
+      }
+    }
+  }
 }
 `, r.baseTemplate(data), data.RandomInteger)
 }
