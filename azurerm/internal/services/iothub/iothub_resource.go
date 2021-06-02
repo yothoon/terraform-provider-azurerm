@@ -320,6 +320,7 @@ func resourceIotHub() *pluginsdk.Resource {
 								"DeviceMessages",
 								"Invalid",
 								"TwinChangeEvents",
+								"DigitalTwinChangeEvents",
 							}, false),
 						},
 						"condition": {
